@@ -1,6 +1,6 @@
 {
   "name": "flowzz-plus",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "description": "Herkunft, Preise, Favoriten und Vergleich für flowzz.com – Userscript & Browser-Erweiterung",
   "type": "module",

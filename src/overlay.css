@@ -734,6 +734,7 @@ html.fx-lock, html.fx-lock body { overflow: hidden !important; }
   position: fixed;
   inset: 0;
   z-index: 5;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
