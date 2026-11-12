@@ -142,7 +142,7 @@ Ziel: „Zeig mir Blüten, die eine Apotheke im Umkreis von 20 km um 10115 Berli
 
 ## 5. Umsetzungsstand (12.11.2026)
 
-- [x] Attribut-Index (Effekte, Geschmack, medizinische Wirkung, Nebenwirkungen, Terpene)
+- [x] Attribut-Index (Wirkung, Geschmack, Terpene) – bewusst ohne medizinische Anwendungsgebiete/Nebenwirkungen
 - [x] Filter-Sektionen mit Trefferzahlen, URL-Parameter, Chips
 - [x] Vergleichsmodus (bis 4 Produkte, Diff-Hervorhebung)
 - [ ] Apotheken-Umkreis (Phase 3, offen)

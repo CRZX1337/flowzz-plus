@@ -146,7 +146,7 @@
       onlyAvail: false,
       onlyFavs: false,
       sort: 'popularity',
-      attrs: { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() }
+      attrs: { e: new Set(), t: new Set(), tp: new Set() }
     }
   };
 
@@ -918,7 +918,7 @@
       ['Bestrahlung', (p) => (p.irr ? 'bestrahlt' : 'unbestrahlt')],
       ['Verfügbar', (p) => (p.avail ? 'ja' : 'nein')],
       ['Bewertung', (p) => (p.rating ? '★ ' + p.rating.toFixed(1) : '—'), 'max'],
-      ['Effekte', (p) => {
+      ['Wirkung (subjektiv)', (p) => {
         const a = idx && idx.products[String(p.id)];
         return a && a.e ? a.e.slice(0, 4).map((id) => labelOf('e', id)).join(', ') : '—';
       }],
@@ -1058,7 +1058,8 @@
     if (ui.dataNote) {
       ui.dataNote.textContent = (state.loadedAt
         ? 'Quelle: flowzz.com · Stand ' + new Date(state.loadedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' · '
-        : '') + 'v' + VERSION;
+        : '') + 'v' + VERSION +
+        '\nWirkung & Terpene: subjektive Angaben von flowzz, keine medizinische Aussage.';
     }
   }
 
@@ -1274,7 +1275,7 @@
       q: state.filters.q, origins: new Set(), producers: new Set(), genetic: '',
       thcMin: null, thcMax: null, priceMax: null, irr: '', onlyAvail: false,
       onlyFavs: state.filters.onlyFavs, sort: state.filters.sort,
-      attrs: { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() }
+      attrs: { e: new Set(), t: new Set(), tp: new Set() }
     };
     state.visible = PAGE_STEP;
     state.items = [];
@@ -1308,7 +1309,7 @@
     state.visible = PAGE_STEP;
     if (ui.input) ui.input.value = '';
     if (ui.favSection) ui.favSection.checkbox.checked = false;
-    state.filters.attrs = { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() };
+    state.filters.attrs = { e: new Set(), t: new Set(), tp: new Set() };
     if (ui.attrs) ui.attrs.reset();
     resetControls();
     render();

@@ -31,8 +31,8 @@ auswählen. Läuft bis zum Neustart; dauerhaft erst nach Signatur (AMO unlisted)
 ## Funktionen
 
 - **Herkunft** – alle Länder mit Flagge und Trefferzahl, Mehrfachauswahl
-- **Effekte, Geschmack, medizinische Wirkung, Nebenwirkungen, Terpene** – Filter mit
-  Trefferzahlen aus dem Attribut-Index (67 Wirkstoff- und 49 Terpen-Labels)
+- **Wirkung (subjektiv), Geschmack, Terpene** – Filter mit Trefferzahlen aus dem
+  Attribut-Index (29 Wirkungs- und 47 Terpen-Labels)
 - **Suche** über Sorte, Produktname, Hersteller und Herkunft
 - **Filter** – Preis pro Gramm, THC von/bis, Strain-Typ, Hersteller, Bestrahlung,
   nur lieferbar, nur Favoriten
@@ -41,7 +41,7 @@ auswählen. Läuft bis zum Neustart; dauerhaft erst nach Signatur (AMO unlisted)
 - **Favoriten** – Stern auf der Karte, Filter „Nur Favoriten“, lokal gespeichert
 - **CSV-Export** der aktuellen Auswahl
 - **Vergleichsmodus** für 2–4 Produkte: Preise, THC/CBD, Herkunft, Bestrahlung, Bewertung,
-  Effekte und Terpene nebeneinander, beste Werte hervorgehoben
+  subjektive Wirkung und Terpene nebeneinander, beste Werte hervorgehoben
 - **Teilbare Links**, z. B. `?fx=1&origin=Kanada&thc=25-&price=6&cat=flowers`
 
 ![Preisvergleich](docs/preisvergleich.png)
@@ -82,6 +82,15 @@ und committet die Änderungen. Die Extension lädt ihn über
 
 `storage` (Cache, Favoriten, Attribut-Index) und `activeTab` (Toolbar-Klick),
 Host nur `https://flowzz.com/*`.
+
+## Rechtlicher Hinweis
+
+Die Wirkungs- und Terpenangaben stammen aus den freiwilligen Community-Angaben von
+flowzz.com. Sie sind **keine medizinische Aussage, keine Indikation und keine
+Heilversprechen**. Bewusst nicht enthalten: medizinische Anwendungsgebiete (z. B.
+Depression, ADHS, Krebs) und Nebenwirkungen – solche Angaben sind für nicht zugelassene
+Produkte rechtlich heikel und medizinisch unbelegt. Bei gesundheitlichen Fragen
+Ärztin/Apotheker fragen.
 
 ## Grenzen
 

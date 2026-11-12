@@ -355,7 +355,7 @@ html.fx-lock, html.fx-lock body { overflow: hidden !important; }
 .fx-switch input:checked + .fx-knob { background: var(--fx-green); }
 .fx-switch input:checked + .fx-knob::after { transform: translateX(14px); }
 
-.fx-datanote { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eef1ee; font-size: 10.5px; color: #a4ada7; line-height: 1.4; }
+.fx-datanote { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eef1ee; font-size: 10.5px; color: #a4ada7; line-height: 1.45; white-space: pre-line; }
 
 /* Main */
 

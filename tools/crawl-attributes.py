@@ -141,6 +141,10 @@ def parse_attrs(attrs):
     if tp:
         keys['tp'] = tp
 
+    # Medizinische Anwendungsgebiete/Nebenwirkungen bewusst nicht übernehmen:
+    # Community-Tags, keine bestätigten Indikationen.
+    keys.pop('m', None)
+    keys.pop('s', None)
     for k in keys:
         keys[k] = sorted(set(keys[k]))
     return keys, labels, strain.get('name'), strain.get('url')
@@ -284,7 +288,8 @@ def main():
 
 
 def write_outputs(catalog, known, progress, vendors):
-    products = {pid: a for pid, a in known.items() if pid in catalog}
+    products = {pid: {k: v for k, v in a.items() if k not in ('m', 's')}
+                for pid, a in known.items() if pid in catalog}
     labelmap = load_labelmap()
     strain_labels = dict(labelmap.get('strain') or {})
     terp_labels = dict(labelmap.get('terp') or {})
@@ -318,7 +323,7 @@ def write_outputs(catalog, known, progress, vendors):
         log(f'geschrieben: {vp} ({os.path.getsize(vp) / 1024:.0f} KB)')
 
     total = len(catalog)
-    cov = {k: 0 for k in ('e', 't', 'm', 's', 'tp')}
+    cov = {k: 0 for k in ('e', 't', 'tp')}
     for a in products.values():
         for k in cov:
             if a.get(k):

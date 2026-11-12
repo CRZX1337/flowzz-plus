@@ -13,16 +13,16 @@
  * }
  */
 
+// Bewusst ohne medizinische Anwendungsgebiete/Nebenwirkungen: Das sind
+// Community-Tags von flowzz, keine bestätigten Indikationen (HWG).
 const FX_ATTR_TYPES = [
-  { key: 'e', type: 'effect', title: 'Effekte', source: 'effect' },
+  { key: 'e', type: 'effect', title: 'Wirkung (subjektiv)', source: 'effect' },
   { key: 't', type: 'taste', title: 'Geschmack', source: 'taste' },
-  { key: 'm', type: 'medicalUsage', title: 'Medizinische Wirkung', source: 'medicalUsage' },
-  { key: 's', type: 'sideEffects', title: 'Nebenwirkungen', source: 'sideEffects' },
   { key: 'tp', type: 'terpene', title: 'Terpene', source: 'terpene' }
 ];
 
-const ATTR_PREFIX = { e: 'eff', t: 'taste', m: 'med', s: 'side', tp: 'terp' };
-const PREFIX_ATTR = { eff: 'e', taste: 't', med: 'm', side: 's', terp: 'tp' };
+const ATTR_PREFIX = { e: 'eff', t: 'taste', tp: 'terp' };
+const PREFIX_ATTR = { eff: 'e', taste: 't', terp: 'tp' };
 
 const gzipB64 = (b64) => {
   const bin = atob(b64);
