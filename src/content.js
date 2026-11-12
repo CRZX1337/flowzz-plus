@@ -209,7 +209,8 @@
   }
 
   async function loadCategory(catId, force) {
-    if (state.loading) return;
+    // Kategorie-Wechsel während eines laufenden Ladevorgangs zulassen:
+    // die alte Antwort wird verworfen, sobald eine andere Kategorie aktiv ist.
     state.error = null;
     state.prices = new Map();
     state.pricesLoading = false;
@@ -230,9 +231,11 @@
     renderLoading();
     try {
       const fresh = await fetchCategory(catId, (n, total) => {
+        if (state.category !== catId) return;
         state.progress = { n, total };
         renderLoading();
       });
+      if (state.category !== catId) return;
       state.items = fresh.items;
       state.loadedAt = fresh.loadedAt;
       state.facetsBuilt = false;
@@ -247,8 +250,10 @@
         ui.empty.querySelector('span').textContent = 'Bitte die Seite neu laden. (' + errMsg(err) + ')';
       }
     } finally {
-      state.loading = false;
-      renderLoading();
+      if (state.category === catId) {
+        state.loading = false;
+        renderLoading();
+      }
     }
   }
 
@@ -952,9 +957,13 @@
 
   function render() {
     if (!state.opened) return;
-    renderTabs();
-    renderFacets();
-    renderGrid();
+    try {
+      renderTabs();
+      renderFacets();
+      renderGrid();
+    } catch (e) {
+      if (ui.dataNote) ui.dataNote.textContent = 'FEHLER: ' + (e && e.message ? e.message : e);
+    }
   }
 
   function renderTabs() {
@@ -1264,7 +1273,8 @@
     state.filters = {
       q: state.filters.q, origins: new Set(), producers: new Set(), genetic: '',
       thcMin: null, thcMax: null, priceMax: null, irr: '', onlyAvail: false,
-      onlyFavs: state.filters.onlyFavs, sort: state.filters.sort
+      onlyFavs: state.filters.onlyFavs, sort: state.filters.sort,
+      attrs: { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() }
     };
     state.visible = PAGE_STEP;
     state.items = [];
