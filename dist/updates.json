@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "flowzz-plus@crzx.space": {
+      "updates": [
+        {
+          "version": "1.1.0",
+          "update_link": "https://github.com/CRZX1337/flowzz-plus/releases/latest/download/flowzz-plus-firefox.xpi"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax prüfen
+        run: |
+          node --check src/content.js
+          node --check src/background.js
+          node -e "JSON.parse(require('fs').readFileSync('src/manifest.chrome.json')); JSON.parse(require('fs').readFileSync('src/manifest.firefox.json'))"
+
+      - name: Bauen
+        run: node tools/build.mjs
+
+      - name: Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/flowzz-plus.user.js
+            dist/flowzz-plus-chrome.zip
+            dist/flowzz-plus-firefox.xpi
+            dist/updates.json
+          generate_release_notes: true
+          fail_on_unmatched_files: true
