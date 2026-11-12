@@ -102,6 +102,10 @@
 
   const catById = (id) => CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
 
+  // Detail-Routen der Website: Blüten /product/…, Extrakte /extract/…, Edibles /edible/…
+  const ROUTES = { flowers: 'product', extracts: 'extract', edibles: 'edible' };
+  const routeFor = (cat) => ROUTES[cat] || 'product';
+
   const errMsg = (err) => (err && err.message ? err.message : String(err));
 
   function toast(text, kind) {
@@ -903,7 +907,7 @@
     for (const p of items) {
       const th = el('th');
       const link = el('a', 'fx-cmp-title', p.strain || p.name);
-      link.href = '/product/' + p.slug;
+      link.href = '/' + routeFor(p.cat) + '/' + p.slug;
       th.append(link, el('div', 'fx-cmp-sub', p.producer || ''));
       hr.append(th);
     }
@@ -1066,7 +1070,7 @@
   function card(p) {
     const a = document.createElement('a');
     a.className = 'fx-card';
-    a.href = '/product/' + p.slug;
+    a.href = '/' + routeFor(p.cat) + '/' + p.slug;
     a.dataset.id = p.id;
 
     const thumb = el('div', 'fx-thumb');
@@ -1189,7 +1193,7 @@
       return [
         p.name, p.strain, p.producer, p.origin, p.thc, p.cbd, p.genetic,
         p.price, p.priceMax, p.rating, p.irr ? 'ja' : 'nein',
-        p.avail ? 'ja' : 'nein', 'https://flowzz.com/product/' + p.slug
+        p.avail ? 'ja' : 'nein', 'https://flowzz.com/' + routeFor(p.cat) + '/' + p.slug
       ].map(csvCell).join(';');
     });
     const csv = '\ufeff' + [head.join(';'), ...rows].join('\r\n');

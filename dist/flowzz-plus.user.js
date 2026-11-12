@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         flowzz+ · Herkunft & Preise
 // @namespace    https://github.com/CRZX1337/flowzz-plus
-// @version      1.3.1
+// @version      1.3.2
 // @description  Herkunft, Apothekenpreise, Favoriten, Preisalarm und CSV-Export auf flowzz.com
 // @author       CRZX1337
 // @match        https://flowzz.com/*
@@ -377,7 +377,7 @@ if (typeof window !== 'undefined') {
   const CACHE_TTL = 6 * 60 * 60 * 1000;
   const VENDOR_TTL = 24 * 60 * 60 * 1000;
   const PAGE_STEP = 60;
-  const VERSION = '1.3.1';
+  const VERSION = '1.3.2';
 
   const CATEGORIES = [
     { id: 'flowers', label: 'Blüten', endpoint: '/api/v1/views/flowers', pricePath: '2', file: 'blueeten' },
@@ -466,6 +466,10 @@ if (typeof window !== 'undefined') {
   const flagOf = (origin) => FLAGS[origin] || '🌱';
 
   const catById = (id) => CATEGORIES.find((c) => c.id === id) || CATEGORIES[0];
+
+  // Detail-Routen der Website: Blüten /product/…, Extrakte /extract/…, Edibles /edible/…
+  const ROUTES = { flowers: 'product', extracts: 'extract', edibles: 'edible' };
+  const routeFor = (cat) => ROUTES[cat] || 'product';
 
   const errMsg = (err) => (err && err.message ? err.message : String(err));
 
@@ -1268,7 +1272,7 @@ if (typeof window !== 'undefined') {
     for (const p of items) {
       const th = el('th');
       const link = el('a', 'fx-cmp-title', p.strain || p.name);
-      link.href = '/product/' + p.slug;
+      link.href = '/' + routeFor(p.cat) + '/' + p.slug;
       th.append(link, el('div', 'fx-cmp-sub', p.producer || ''));
       hr.append(th);
     }
@@ -1431,7 +1435,7 @@ if (typeof window !== 'undefined') {
   function card(p) {
     const a = document.createElement('a');
     a.className = 'fx-card';
-    a.href = '/product/' + p.slug;
+    a.href = '/' + routeFor(p.cat) + '/' + p.slug;
     a.dataset.id = p.id;
 
     const thumb = el('div', 'fx-thumb');
@@ -1554,7 +1558,7 @@ if (typeof window !== 'undefined') {
       return [
         p.name, p.strain, p.producer, p.origin, p.thc, p.cbd, p.genetic,
         p.price, p.priceMax, p.rating, p.irr ? 'ja' : 'nein',
-        p.avail ? 'ja' : 'nein', 'https://flowzz.com/product/' + p.slug
+        p.avail ? 'ja' : 'nein', 'https://flowzz.com/' + routeFor(p.cat) + '/' + p.slug
       ].map(csvCell).join(';');
     });
     const csv = '\ufeff' + [head.join(';'), ...rows].join('\r\n');
