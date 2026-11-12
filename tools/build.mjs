@@ -22,7 +22,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 const version = pkg.version;
 
 const read = (file) => fs.readFileSync(path.join(SRC, file), 'utf8');
-const content = read('content.js');
+const content = read('content.js').replaceAll('__FX_VERSION__', version);
 const css = read('overlay.css');
 const background = read('background.js');
 const manifestChrome = JSON.parse(read('manifest.chrome.json'));
@@ -66,7 +66,7 @@ function stage(name, manifest) {
   const dir = path.join(BUILD, name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  fs.copyFileSync(path.join(SRC, 'content.js'), path.join(dir, 'content.js'));
+  fs.writeFileSync(path.join(dir, 'content.js'), content);
   fs.copyFileSync(path.join(SRC, 'overlay.css'), path.join(dir, 'overlay.css'));
   fs.copyFileSync(path.join(SRC, 'background.js'), path.join(dir, 'background.js'));
   fs.cpSync(path.join(ROOT, 'icons'), path.join(dir, 'icons'), { recursive: true });

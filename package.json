@@ -1,6 +1,6 @@
 {
   "name": "flowzz-plus",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Herkunft, Apothekenpreise, Favoriten und Preisalarm für flowzz.com – Userscript & Browser-Erweiterung",
   "type": "module",

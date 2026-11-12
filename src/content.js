@@ -12,6 +12,7 @@
   const CACHE_TTL = 6 * 60 * 60 * 1000;
   const VENDOR_TTL = 24 * 60 * 60 * 1000;
   const PAGE_STEP = 60;
+  const VERSION = '__FX_VERSION__';
 
   const CATEGORIES = [
     { id: 'flowers', label: 'Blüten', endpoint: '/api/v1/views/flowers', pricePath: '2', file: 'blueeten' },
@@ -924,9 +925,9 @@
       : 'Keine Treffer';
     if (ui.favSection) ui.favSection.text.textContent = 'Nur Favoriten (' + state.favorites.size + ')';
     if (ui.dataNote) {
-      ui.dataNote.textContent = state.loadedAt
-        ? 'Quelle: flowzz.com · Stand ' + new Date(state.loadedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-        : '';
+      ui.dataNote.textContent = (state.loadedAt
+        ? 'Quelle: flowzz.com · Stand ' + new Date(state.loadedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' · '
+        : '') + 'v' + VERSION;
     }
   }
 

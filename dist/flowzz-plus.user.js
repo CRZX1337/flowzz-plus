@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         flowzz+ · Herkunft & Preise
 // @namespace    https://github.com/CRZX1337/flowzz-plus
-// @version      1.1.0
+// @version      1.1.1
 // @description  Herkunft, Apothekenpreise, Favoriten, Preisalarm und CSV-Export auf flowzz.com
 // @author       CRZX1337
 // @match        https://flowzz.com/*
@@ -30,6 +30,7 @@
   const CACHE_TTL = 6 * 60 * 60 * 1000;
   const VENDOR_TTL = 24 * 60 * 60 * 1000;
   const PAGE_STEP = 60;
+  const VERSION = '1.1.1';
 
   const CATEGORIES = [
     { id: 'flowers', label: 'Blüten', endpoint: '/api/v1/views/flowers', pricePath: '2', file: 'blueeten' },
@@ -942,9 +943,9 @@
       : 'Keine Treffer';
     if (ui.favSection) ui.favSection.text.textContent = 'Nur Favoriten (' + state.favorites.size + ')';
     if (ui.dataNote) {
-      ui.dataNote.textContent = state.loadedAt
-        ? 'Quelle: flowzz.com · Stand ' + new Date(state.loadedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-        : '';
+      ui.dataNote.textContent = (state.loadedAt
+        ? 'Quelle: flowzz.com · Stand ' + new Date(state.loadedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' · '
+        : '') + 'v' + VERSION;
     }
   }
 
