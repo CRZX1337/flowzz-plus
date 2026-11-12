@@ -14,6 +14,9 @@
   const PAGE_STEP = 60;
   const VERSION = '__FX_VERSION__';
 
+  const UPDATE_JSON = 'https://raw.githubusercontent.com/CRZX1337/flowzz-plus/main/dist/version.json';
+  const INSTALL_URL = 'https://github.com/CRZX1337/flowzz-plus/releases/latest/download/flowzz-plus.user.js';
+
   const CATEGORIES = [
     { id: 'flowers', label: 'Blüten', endpoint: '/api/v1/views/flowers', pricePath: '2', file: 'blueeten' },
     { id: 'extracts', label: 'Extrakte', endpoint: '/api/v1/views/extracts', pricePath: '3', file: 'extrakte' },
@@ -561,6 +564,9 @@
 
     ui.attrHost = el('div', 'fx-attr-host');
     ui.dataNote = el('div', 'fx-datanote', '');
+    ui.updateCheck = el('button', 'fx-updatecheck', 'Nach Update suchen');
+    ui.updateCheck.type = 'button';
+    ui.updateCheck.addEventListener('click', () => checkUpdate(true));
     side.append(
       sideHead,
       ui.originSection.node,
@@ -572,6 +578,7 @@
       ui.availSection.node,
       ui.favSection.node,
       ui.attrHost,
+      ui.updateCheck,
       ui.dataNote
     );
 
@@ -1320,6 +1327,78 @@
     syncURL();
   }
 
+  /* ---------- Update-Checker ---------- */
+
+  function versionParts(v) {
+    return String(v || '0').split('.').map((n) => parseInt(n, 10) || 0);
+  }
+
+  function isNewer(remote, local) {
+    const a = versionParts(remote);
+    const b = versionParts(local);
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const x = a[i] || 0;
+      const y = b[i] || 0;
+      if (x > y) return true;
+      if (x < y) return false;
+    }
+    return false;
+  }
+
+  async function checkUpdate(force) {
+    try {
+      const last = Number(await store.get('fx_update_checked') || 0);
+      if (!force && Date.now() - last < 6 * 60 * 60 * 1000) return;
+      await store.set('fx_update_checked', Date.now());
+
+      const res = await fetch(UPDATE_JSON + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !data.version || !isNewer(data.version, VERSION)) {
+        if (force) toast('flowzz+ ist aktuell (v' + VERSION + ')', 'good');
+        return;
+      }
+      const dismissed = await store.get('fx_update_dismissed');
+      if (dismissed === data.version) {
+        if (force) toast('Update v' + data.version + ' verfügbar', 'good');
+        return;
+      }
+      showUpdateBanner(data.version, data.url || INSTALL_URL);
+    } catch (e) {
+      if (force) toast('Update-Prüfung fehlgeschlagen', 'error');
+    }
+  }
+
+  function showUpdateBanner(version, url) {
+    if (!ui.shadow || ui.updateBanner) return;
+    const box = el('div', 'fx-update');
+    box.setAttribute('role', 'status');
+
+    const dot = el('span', 'fx-update-dot');
+    const text = el('div', 'fx-update-text');
+    text.append(el('b', null, 'Update verfügbar'), el('span', null, 'Version ' + version + ' ist da'));
+
+    const go = el('a', 'fx-update-btn', 'Aktualisieren');
+    go.href = url;
+    go.target = '_blank';
+    go.rel = 'noopener';
+
+    const close = el('button', 'fx-update-close', '✕');
+    close.type = 'button';
+    close.title = 'Später';
+    close.addEventListener('click', async () => {
+      await store.set('fx_update_dismissed', version);
+      box.classList.remove('is-visible');
+      setTimeout(() => box.remove(), 250);
+      ui.updateBanner = null;
+    });
+
+    box.append(dot, text, go, close);
+    ui.shadow.appendChild(box);
+    ui.updateBanner = box;
+    requestAnimationFrame(() => box.classList.add('is-visible'));
+  }
+
   /* ---------- URL ---------- */
 
   const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort',
@@ -1530,6 +1609,7 @@
 
     loadUserData();
     loadCategory(state.category, false);
+    setTimeout(() => checkUpdate(false), 4000);
     injectDetailBadge();
 
     if (params.get('fx') === '1') {

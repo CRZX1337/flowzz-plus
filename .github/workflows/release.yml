@@ -36,5 +36,6 @@ jobs:
             dist/flowzz-plus-chrome.zip
             dist/flowzz-plus-firefox.xpi
             dist/updates.json
+            dist/version.json
           generate_release_notes: true
           fail_on_unmatched_files: true

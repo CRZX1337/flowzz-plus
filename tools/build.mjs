@@ -100,6 +100,12 @@ zipDir(stage('firefox', manifestFirefox), path.join(DIST, 'flowzz-plus-firefox.x
 
 /* ---------- Firefox-Update-Manifest ---------- */
 
+fs.writeFileSync(path.join(DIST, 'version.json'), JSON.stringify({
+  version,
+  released: new Date().toISOString().slice(0, 10),
+  url: `${BASE}/flowzz-plus.user.js`
+}, null, 2) + '\n');
+
 const updates = {
   addons: {
     'flowzz-plus@crzx.space': {
