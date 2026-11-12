@@ -1,0 +1,123 @@
+(() => {
+'use strict';
+/**
+ * flowzz+ Attribut-Index laden und Attribute filtern.
+ * Wird in content.js eingebunden (Build inlined beide Teile).
+ *
+ * Index-Format (attrs.json.gz, entpackt):
+ * {
+ *   version, generated, count,
+ *   catalog: { id: {slug, cat, name, origin, producer, thc, cbd, price, avail, genetic, rating} },
+ *   labels:  { id: {label, type} },
+ *   products:{ id: { e:[ids], t:[ids], m:[ids], s:[ids], tp:[ids] } }
+ * }
+ */
+
+const FX_ATTR_TYPES = [
+  { key: 'e', type: 'effect', title: 'Effekte', source: 'effect' },
+  { key: 't', type: 'taste', title: 'Geschmack', source: 'taste' },
+  { key: 'm', type: 'medicalUsage', title: 'Medizinische Wirkung', source: 'medicalUsage' },
+  { key: 's', type: 'sideEffects', title: 'Nebenwirkungen', source: 'sideEffects' },
+  { key: 'tp', type: 'terpene', title: 'Terpene', source: 'terpene' }
+];
+
+const ATTR_PREFIX = { e: 'eff', t: 'taste', m: 'med', s: 'side', tp: 'terp' };
+const PREFIX_ATTR = { eff: 'e', taste: 't', med: 'm', side: 's', terp: 'tp' };
+
+const gzipB64 = (b64) => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (typeof DecompressionStream === 'undefined') {
+    return Promise.reject(new Error('DecompressionStream fehlt'));
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+};
+
+/**
+ * Lädt den Index aus dem Extension-Bundle (gzip) oder per fetch von der URL.
+ * Gibt { catalog, labels, products, version } zurück.
+ */
+async function fxLoadIndex({ base64, url, timeoutMs = 8000 }) {
+  const parse = (text) => {
+    const data = JSON.parse(text);
+    if (!data || !data.products) throw new Error('Index ohne products');
+    return data;
+  };
+  if (base64) {
+    return parse(await gzipB64(base64));
+  }
+  if (url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, cache: 'no-cache' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const buf = await res.arrayBuffer();
+      // gzip magic 1f 8b?
+      const head = new Uint8Array(buf.slice(0, 2));
+      if (head[0] === 0x1f && head[1] === 0x8b) {
+        if (typeof DecompressionStream === 'undefined') throw new Error('kein gunzip');
+        const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+        return parse(await new Response(stream).text());
+      }
+      return parse(new TextDecoder().decode(buf));
+    } finally {
+      clearTimeout(t);
+    }
+  }
+  throw new Error('kein Index');
+}
+
+/** Produkt-Attribute als Set-Schnitt prüfen. */
+function fxMatchesAttrs(attrs, selected) {
+  for (const key of Object.keys(selected)) {
+    const wanted = selected[key];
+    if (!wanted || !wanted.size) continue;
+    const have = attrs && attrs[key];
+    if (!have || !have.length) return false;
+    let hit = false;
+    for (const id of have) {
+      if (wanted.has(id)) { hit = true; break; }
+    }
+    if (!hit) return false;
+  }
+  return true;
+}
+
+/** Label für eine Attribut-ID im richtigen Namensraum (Terpene getrennt). */
+function fxLabelOf(index, key, id) {
+  if (!index) return String(id);
+  if (key === 'tp') {
+    const t = index.terpLabels && index.terpLabels[String(id)];
+    if (t) return t;
+  }
+  const l = index.labels && index.labels[String(id)];
+  if (l && typeof l === 'object') return l.label || String(id);
+  if (typeof l === 'string') return l;
+  return String(id);
+}
+
+/** Labels einer Kategorie, sortiert nach Häufigkeit im aktuellen Index. */
+function fxLabelList(index, key) {
+  const counts = new Map();
+  for (const attrs of Object.values(index.products)) {
+    for (const id of (attrs[key] || [])) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([id, n]) => ({ id, n, label: fxLabelOf(index, key, id) }))
+    .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'de'));
+}
+
+if (typeof window !== 'undefined') {
+  window.fxLoadIndex = fxLoadIndex;
+  window.fxMatchesAttrs = fxMatchesAttrs;
+  window.fxLabelList = fxLabelList;
+  window.fxLabelOf = fxLabelOf;
+  window.FX_ATTR_TYPES = FX_ATTR_TYPES;
+  window.ATTR_PREFIX = ATTR_PREFIX;
+  window.PREFIX_ATTR = PREFIX_ATTR;
+}
+
+})();

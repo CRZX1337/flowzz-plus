@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         flowzz+ · Herkunft & Preise
 // @namespace    https://github.com/CRZX1337/flowzz-plus
-// @version      1.1.1
+// @version      1.3.0
 // @description  Herkunft, Apothekenpreise, Favoriten, Preisalarm und CSV-Export auf flowzz.com
 // @author       CRZX1337
 // @match        https://flowzz.com/*
@@ -13,7 +13,354 @@
 // ==/UserScript==
 
 (function () {
-  window.__FX_CSS = ":host {\n  all: initial;\n  --fx-green: #19796d;\n  --fx-green-dark: #12615a;\n  --fx-ink: #111512;\n  --fx-muted: #6d7772;\n  --fx-line: #e5eae6;\n  --fx-bg: #f7f8f6;\n  --fx-soft: #f1f4f1;\n  font-family: \"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n}\n\n* { box-sizing: border-box; }\n\n#fx-host {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483000;\n  pointer-events: none;\n}\n\n#fx-host.fx-visible { pointer-events: auto; }\n\nhtml.fx-lock, html.fx-lock body { overflow: hidden !important; }\n\n/* ---------- Launcher ---------- */\n\n.fx-launcher {\n  position: fixed;\n  right: 22px;\n  bottom: 22px;\n  display: inline-flex;\n  align-items: center;\n  gap: 9px;\n  padding: 9px 15px 9px 9px;\n  border: 0;\n  border-radius: 999px;\n  background: #111512;\n  color: #fff;\n  font: 600 13px/1 \"Inter\", -apple-system, \"Segoe UI\", sans-serif;\n  letter-spacing: 0.01em;\n  box-shadow: 0 10px 26px rgba(17, 21, 18, 0.24), 0 2px 6px rgba(17, 21, 18, 0.16);\n  cursor: pointer;\n  opacity: 0;\n  transform: translateY(14px);\n  pointer-events: none;\n  transition: opacity 0.22s ease, transform 0.22s ease, background 0.16s ease;\n}\n\n.fx-launcher.is-visible { opacity: 1; transform: none; pointer-events: auto; }\n.fx-launcher:hover { background: var(--fx-green); }\n\n.fx-launcher-logo {\n  display: grid;\n  place-items: center;\n  width: 26px;\n  height: 26px;\n  border-radius: 999px;\n  background: var(--fx-green);\n  color: #fff;\n  font: 700 12px/1 \"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, monospace;\n}\n\n.fx-launcher:hover .fx-launcher-logo { background: #fff; color: var(--fx-green); }\n\n/* ---------- Overlay ---------- */\n\n.fx-app { pointer-events: auto; }\n\n.fx-app {\n  position: fixed;\n  inset: 0;\n  display: flex;\n  flex-direction: column;\n  background: var(--fx-bg);\n  color: var(--fx-ink);\n  opacity: 0;\n  visibility: hidden;\n  transform: translateY(8px);\n  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;\n  pointer-events: none;\n}\n\n.fx-app.is-open {\n  opacity: 1;\n  visibility: visible;\n  transform: none;\n  pointer-events: auto;\n}\n\n.fx-app a { color: inherit; text-decoration: none; }\n.fx-app button, .fx-app input, .fx-app select { font-family: inherit; }\n\n/* Kopf */\n\n.fx-top {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: 20px;\n  height: 68px;\n  padding: 0 22px;\n  background: #fff;\n  border-bottom: 1px solid var(--fx-line);\n}\n\n.fx-brand { display: flex; align-items: center; gap: 10px; min-width: 168px; }\n\n.fx-logo {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  border-radius: 10px;\n  background: var(--fx-green);\n  color: #fff;\n  font: 700 14px/1 \"Geist Mono\", ui-monospace, monospace;\n}\n\n.fx-brandtext { display: flex; flex-direction: column; gap: 1px; }\n.fx-brandtext b { font-size: 14px; letter-spacing: -0.01em; }\n.fx-brandtext small { font-size: 10.5px; color: var(--fx-muted); letter-spacing: 0.02em; }\n\n.fx-search {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  gap: 9px;\n  height: 42px;\n  padding: 0 12px;\n  background: var(--fx-soft);\n  border: 1px solid transparent;\n  border-radius: 11px;\n  color: var(--fx-muted);\n  transition: border-color 0.15s ease, background 0.15s ease;\n}\n\n.fx-search:focus-within { background: #fff; border-color: var(--fx-green); }\n\n.fx-search input {\n  flex: 1;\n  min-width: 0;\n  border: 0;\n  outline: 0;\n  background: transparent;\n  color: var(--fx-ink);\n  font-size: 14px;\n}\n\n.fx-search input::placeholder { color: #98a29c; }\n.fx-search kbd, .fx-close kbd {\n  font: 500 10.5px/1 \"Geist Mono\", ui-monospace, monospace;\n  color: #8b958f;\n  background: #fff;\n  border: 1px solid var(--fx-line);\n  border-radius: 5px;\n  padding: 3px 5px;\n}\n\n.fx-close {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  height: 36px;\n  padding: 0 9px;\n  border: 1px solid var(--fx-line);\n  border-radius: 9px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 12.5px;\n  cursor: pointer;\n}\n\n.fx-close:hover { background: var(--fx-soft); }\n\n/* Body */\n\n.fx-body {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 272px minmax(0, 1fr);\n  min-height: 0;\n}\n\n.fx-side {\n  overflow-y: auto;\n  padding: 18px 18px 28px;\n  background: #fff;\n  border-right: 1px solid var(--fx-line);\n}\n\n.fx-side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }\n.fx-countbox { display: flex; align-items: baseline; gap: 6px; }\n.fx-countbox b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }\n.fx-countbox span { font-size: 12px; color: var(--fx-muted); }\n\n.fx-reset {\n  border: 0;\n  background: none;\n  padding: 0;\n  color: var(--fx-green);\n  font-size: 11.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n\n.fx-reset:hover { text-decoration: underline; }\n\n.fx-section { border-top: 1px solid #eef1ee; }\n\n.fx-section-head {\n  width: 100%;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 14px 0;\n  border: 0;\n  background: none;\n  color: #3f4a44;\n  font-size: 11.5px;\n  font-weight: 650;\n  letter-spacing: 0.07em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.fx-section-head i {\n  width: 7px;\n  height: 7px;\n  border-right: 1.5px solid #8b958f;\n  border-bottom: 1.5px solid #8b958f;\n  transform: rotate(45deg) translateY(-2px);\n  transition: transform 0.18s ease;\n}\n\n.fx-section.fx-collapsed .fx-section-head i { transform: rotate(-45deg); }\n.fx-section.fx-collapsed .fx-section-body,\n.fx-section.fx-collapsed .fx-mini-search { display: none; }\n\n.fx-section-body { padding-bottom: 14px; }\n\n.fx-mini-search {\n  width: 100%;\n  height: 30px;\n  margin-bottom: 8px;\n  padding: 0 9px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  font-size: 12.5px;\n  outline: 0;\n  background: #fff;\n}\n\n.fx-mini-search:focus { border-color: var(--fx-green); }\n\n.fx-checklist { max-height: 264px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }\n.fx-checklist::-webkit-scrollbar { width: 6px; }\n.fx-checklist::-webkit-scrollbar-thumb { background: #d9dfda; border-radius: 99px; }\n\n.fx-check {\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 4px;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 13px;\n}\n\n.fx-check:hover { background: var(--fx-soft); }\n.fx-check.is-zero { opacity: 0.45; }\n.fx-check input { width: 14px; height: 14px; margin: 0; accent-color: var(--fx-green); }\n.fx-flag { font-size: 14px; line-height: 1; }\n.fx-checkname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.fx-checkcount { font-size: 11px; color: #98a29c; font-variant-numeric: tabular-nums; }\n\n.fx-producer {\n  width: 100%;\n  height: 34px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  font-size: 12.5px;\n  color: var(--fx-ink);\n  outline: 0;\n}\n\n.fx-producer:focus { border-color: var(--fx-green); }\n\n.fx-rangevalue { margin-bottom: 8px; font-size: 12px; color: var(--fx-muted); }\n.fx-app input[type=\"range\"] { width: 100%; accent-color: var(--fx-green); }\n\n.fx-numberrow { display: flex; align-items: center; gap: 6px; }\n.fx-numberrow input {\n  width: 70px;\n  height: 32px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  font-size: 12.5px;\n  outline: 0;\n}\n.fx-numberrow input:focus { border-color: var(--fx-green); }\n.fx-dash { color: #98a29c; font-size: 12px; }\n\n.fx-seg {\n  display: grid;\n  grid-auto-flow: column;\n  grid-auto-columns: 1fr;\n  gap: 3px;\n  padding: 3px;\n  background: var(--fx-soft);\n  border-radius: 9px;\n}\n\n.fx-segbtn {\n  border: 0;\n  border-radius: 7px;\n  background: transparent;\n  padding: 7px 4px;\n  font-size: 11.5px;\n  font-weight: 550;\n  color: #5c665f;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n.fx-segbtn.is-active { background: #fff; color: var(--fx-ink); box-shadow: 0 1px 2px rgba(17, 21, 18, 0.1); }\n\n.fx-switch { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13px; }\n.fx-switch input { position: absolute; opacity: 0; pointer-events: none; }\n.fx-knob {\n  position: relative;\n  width: 34px;\n  height: 20px;\n  border-radius: 999px;\n  background: #d8ded9;\n  transition: background 0.16s ease;\n  flex: none;\n}\n.fx-knob::after {\n  content: \"\";\n  position: absolute;\n  top: 3px;\n  left: 3px;\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: #fff;\n  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);\n  transition: transform 0.16s ease;\n}\n.fx-switch input:checked + .fx-knob { background: var(--fx-green); }\n.fx-switch input:checked + .fx-knob::after { transform: translateX(14px); }\n\n.fx-datanote { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eef1ee; font-size: 10.5px; color: #a4ada7; line-height: 1.4; }\n\n/* Main */\n\n.fx-main { overflow-y: auto; padding: 18px 24px 70px; }\n\n.fx-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.fx-resulttext { font-size: 12.5px; color: var(--fx-muted); }\n.fx-tools { display: flex; align-items: center; gap: 8px; }\n\n.fx-select { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--fx-muted); }\n.fx-select select {\n  height: 32px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 12.5px;\n  outline: 0;\n}\n\n.fx-iconbtn {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 15px;\n  cursor: pointer;\n}\n.fx-iconbtn:hover { background: var(--fx-soft); }\n\n.fx-mobilefilter { display: none; }\n\n.fx-loading { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 12px; color: var(--fx-muted); }\n.fx-progress { flex: 1; height: 3px; border-radius: 99px; background: #e6ebe7; overflow: hidden; }\n.fx-progress i { display: block; height: 100%; width: 8%; background: var(--fx-green); border-radius: 99px; transition: width 0.3s ease; }\n\n.fx-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));\n  gap: 16px;\n}\n\n.fx-grid.fx-grid-empty { display: none; }\n\n.fx-card {\n  display: flex;\n  flex-direction: column;\n  background: #fff;\n  border: 1px solid var(--fx-line);\n  border-radius: 14px;\n  overflow: hidden;\n  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;\n}\n\n.fx-card:hover {\n  transform: translateY(-2px);\n  border-color: #d5ded8;\n  box-shadow: 0 10px 24px rgba(17, 21, 18, 0.08);\n}\n\n.fx-thumb { position: relative; aspect-ratio: 1 / 1; background: var(--fx-soft); }\n.fx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }\n\n.fx-orgbadge {\n  position: absolute;\n  top: 8px;\n  left: 8px;\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  max-width: calc(100% - 16px);\n  padding: 4px 8px;\n  background: rgba(255, 255, 255, 0.93);\n  -webkit-backdrop-filter: blur(6px);\n  backdrop-filter: blur(6px);\n  border: 1px solid rgba(17, 21, 18, 0.06);\n  border-radius: 999px;\n  font-size: 10.5px;\n  font-weight: 600;\n  color: #2c342f;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.fx-orgbadge .fx-flag { font-size: 12px; }\n\n.fx-soldout {\n  position: absolute;\n  left: 8px;\n  bottom: 8px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: rgba(17, 21, 18, 0.72);\n  color: #fff;\n  font-size: 10px;\n  letter-spacing: 0.01em;\n}\n\n.fx-cardbody { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; }\n\n.fx-cardprod {\n  font-size: 10px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: #8b958f;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.fx-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.25;\n  letter-spacing: -0.005em;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n  min-height: 35px;\n}\n\n.fx-meta { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--fx-muted); }\n.fx-dot { color: #c3cbc6; }\n\n.fx-tag {\n  align-self: flex-start;\n  margin-top: 2px;\n  padding: 2px 7px;\n  border-radius: 999px;\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-size: 10px;\n  font-weight: 600;\n}\n\n.fx-foot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }\n.fx-price b { font-size: 15px; letter-spacing: -0.01em; }\n.fx-price small { font-size: 10.5px; color: var(--fx-muted); font-weight: 500; }\n.fx-rating { font-size: 11.5px; color: #8a6d1f; }\n\n.fx-empty {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 5px;\n  padding: 90px 20px;\n  color: var(--fx-muted);\n  font-size: 12.5px;\n}\n.fx-empty b { font-size: 16px; color: var(--fx-ink); }\n\n.fx-more { display: flex; justify-content: center; padding: 26px 0 0; }\n\n.fx-btn {\n  height: 38px;\n  padding: 0 18px;\n  border: 1px solid var(--fx-line);\n  border-radius: 10px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 13px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-btn:hover { background: var(--fx-soft); }\n\n/* Detailseite */\n\n.fx-detail-line { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 10px 0 4px; }\n\n.fx-detail-badge {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  padding: 6px 12px;\n  border: 1px solid #cfe3dc;\n  border-radius: 999px;\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-detail-badge:hover { background: #e2f0ea; }\n\n.fx-detail-link {\n  border: 0;\n  background: none;\n  padding: 0;\n  color: var(--fx-green);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-detail-link:hover { text-decoration: underline; }\n\n/* ---------- Responsive ---------- */\n\n@media (max-width: 980px) {\n  .fx-top { height: 60px; padding: 0 12px; gap: 10px; }\n  .fx-brand { min-width: 0; }\n  .fx-brandtext { display: none; }\n  .fx-search { height: 38px; }\n  .fx-search kbd { display: none; }\n  .fx-close kbd { display: none; }\n  .fx-body { grid-template-columns: 1fr; }\n  .fx-main { padding: 14px 12px 60px; }\n\n  .fx-side {\n    position: fixed;\n    z-index: 3;\n    top: 60px;\n    bottom: 0;\n    left: 0;\n    width: 286px;\n    transform: translateX(-102%);\n    transition: transform 0.22s ease;\n    box-shadow: 0 10px 40px rgba(17, 21, 18, 0.18);\n  }\n  .fx-side.fx-side-open { transform: none; }\n\n  .fx-mobilefilter {\n    display: inline-flex;\n    align-items: center;\n    height: 32px;\n    padding: 0 11px;\n    border: 1px solid var(--fx-line);\n    border-radius: 8px;\n    background: #fff;\n    font-size: 12.5px;\n    font-weight: 600;\n    cursor: pointer;\n  }\n\n  .fx-select span { display: none; }\n  .fx-grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }\n  .fx-name { font-size: 12.5px; min-height: 31px; }\n  .fx-foot { flex-direction: column; align-items: flex-start; gap: 2px; }\n  .fx-launcher { right: 14px; bottom: 14px; }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .fx-app, .fx-launcher, .fx-card { transition: none; }\n}\n\n\n/* hidden-Attribut darf nicht von display-Regeln überstimmt werden */\n.fx-app [hidden] { display: none !important; }\n\n/* ---------- Kategorien ---------- */\n\n.fx-tabs {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 46px;\n  padding: 0 22px;\n  background: #fff;\n  border-bottom: 1px solid var(--fx-line);\n}\n\n.fx-tab {\n  border: 0;\n  background: none;\n  padding: 6px 12px;\n  border-radius: 8px;\n  font-size: 13px;\n  font-weight: 600;\n  color: var(--fx-muted);\n  cursor: pointer;\n}\n\n.fx-tab:hover { background: var(--fx-soft); }\n.fx-tab.is-active { background: #edf5f2; color: var(--fx-green-dark); }\n\n/* ---------- Karten-Aktionen ---------- */\n\n.fx-actions {\n  position: absolute;\n  top: 8px;\n  right: 8px;\n  display: flex;\n  gap: 4px;\n  opacity: 0.55;\n  transition: opacity 0.15s ease;\n}\n\n.fx-card:hover .fx-actions,\n.fx-actions:focus-within { opacity: 1; }\n\n.fx-actbtn {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n  display: grid;\n  place-items: center;\n  border: 1px solid rgba(17, 21, 18, 0.06);\n  border-radius: 999px;\n  background: rgba(255, 255, 255, 0.93);\n  -webkit-backdrop-filter: blur(6px);\n  backdrop-filter: blur(6px);\n  color: #5c665f;\n  font-size: 12px;\n  line-height: 1;\n  cursor: pointer;\n}\n\n.fx-actbtn.is-on { background: var(--fx-green); border-color: var(--fx-green); color: #fff; }\n\n.fx-offers {\n  align-self: flex-start;\n  margin: 2px 0 0;\n  padding: 0;\n  border: 0;\n  background: none;\n  min-height: 12px;\n  font-size: 10.5px;\n  font-weight: 600;\n  color: var(--fx-green-dark);\n  text-align: left;\n  cursor: pointer;\n  text-decoration: underline;\n  text-decoration-color: rgba(25, 121, 109, 0.25);\n  text-underline-offset: 2px;\n}\n\n.fx-offers:hover { text-decoration-color: var(--fx-green); }\n\n.fx-csvbtn {\n  width: auto;\n  padding: 0 9px;\n  font-size: 10.5px;\n  font-weight: 700;\n  letter-spacing: 0.04em;\n}\n\n/* ---------- Modals ---------- */\n\n.fx-modal {\n  position: fixed;\n  inset: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  padding: 22px;\n  background: rgba(17, 21, 18, 0.42);\n}\n\n.fx-modal[hidden] { display: none !important; }\n\n.fx-modal-card {\n  width: min(520px, 100%);\n  max-height: 82vh;\n  overflow: auto;\n  background: #fff;\n  border-radius: 16px;\n  box-shadow: 0 24px 60px rgba(17, 21, 18, 0.28);\n}\n\n.fx-modal-inner { padding: 18px 20px 20px; }\n\n.fx-modal-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }\n.fx-modal-head b { font-size: 16px; letter-spacing: -0.01em; }\n.fx-modal-head span {\n  flex: 1;\n  min-width: 0;\n  font-size: 12px;\n  color: var(--fx-muted);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.fx-modal-close {\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 8px;\n  background: var(--fx-soft);\n  color: #5c665f;\n  font-size: 12px;\n  cursor: pointer;\n}\n\n.fx-modal-note { margin-bottom: 10px; font-size: 11.5px; line-height: 1.5; color: var(--fx-muted); }\n\n.fx-modal-summary {\n  display: flex;\n  align-items: baseline;\n  gap: 8px;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  background: #edf5f2;\n  border-radius: 10px;\n}\n.fx-modal-summary b { font-size: 18px; color: var(--fx-green-dark); }\n.fx-modal-summary span { font-size: 11.5px; color: #3f4a44; }\n\n.fx-offerlist { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; }\n\n.fx-offer {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  padding: 8px 4px;\n  border-bottom: 1px solid #eef1ee;\n  font-size: 12.5px;\n}\n\n.fx-offer-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }\n.fx-offer-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.fx-offer-city { font-size: 10.5px; color: var(--fx-muted); }\n.fx-offer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }\n.fx-offer-state { font-size: 10px; color: #a4ada7; }\n.fx-offer-state.is-avail { color: var(--fx-green); }\n\n.fx-modal-actions { display: flex; gap: 8px; margin-top: 12px; }\n.fx-btn-primary { background: var(--fx-green); border-color: var(--fx-green); color: #fff; }\n.fx-btn-primary:hover { background: var(--fx-green-dark); }\n\n.fx-toast {\n  position: fixed;\n  left: 50%;\n  bottom: 26px;\n  z-index: 6;\n  max-width: 90vw;\n  padding: 10px 14px;\n  border-radius: 10px;\n  background: #111512;\n  color: #fff;\n  font-size: 12.5px;\n  opacity: 0;\n  transform: translate(-50%, 14px);\n  pointer-events: none;\n  transition: opacity 0.2s ease, transform 0.2s ease;\n}\n.fx-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }\n.fx-toast-good { background: var(--fx-green); }\n\n@media (max-width: 980px) {\n  .fx-tabs { padding: 0 12px; height: 44px; }\n  .fx-actions { opacity: 1; }\n  .fx-modal { padding: 12px; }\n  .fx-modal-card { max-height: 88vh; }\n}\n";
+  window.__FX_CSS = ":host {\n  all: initial;\n  --fx-green: #19796d;\n  --fx-green-dark: #12615a;\n  --fx-ink: #111512;\n  --fx-muted: #6d7772;\n  --fx-line: #e5eae6;\n  --fx-bg: #f7f8f6;\n  --fx-soft: #f1f4f1;\n  font-family: \"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n}\n\n* { box-sizing: border-box; }\n\n#fx-host {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483000;\n  pointer-events: none;\n}\n\n#fx-host.fx-visible { pointer-events: auto; }\n\nhtml.fx-lock, html.fx-lock body { overflow: hidden !important; }\n\n/* ---------- Launcher ---------- */\n\n.fx-launcher {\n  position: fixed;\n  right: 22px;\n  bottom: 22px;\n  display: inline-flex;\n  align-items: center;\n  gap: 9px;\n  padding: 9px 15px 9px 9px;\n  border: 0;\n  border-radius: 999px;\n  background: #111512;\n  color: #fff;\n  font: 600 13px/1 \"Inter\", -apple-system, \"Segoe UI\", sans-serif;\n  letter-spacing: 0.01em;\n  box-shadow: 0 10px 26px rgba(17, 21, 18, 0.24), 0 2px 6px rgba(17, 21, 18, 0.16);\n  cursor: pointer;\n  opacity: 0;\n  transform: translateY(14px);\n  pointer-events: none;\n  transition: opacity 0.22s ease, transform 0.22s ease, background 0.16s ease;\n}\n\n.fx-launcher.is-visible { opacity: 1; transform: none; pointer-events: auto; }\n.fx-launcher:hover { background: var(--fx-green); }\n\n.fx-launcher-logo {\n  display: grid;\n  place-items: center;\n  width: 26px;\n  height: 26px;\n  border-radius: 999px;\n  background: var(--fx-green);\n  color: #fff;\n  font: 700 12px/1 \"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, monospace;\n}\n\n.fx-launcher:hover .fx-launcher-logo { background: #fff; color: var(--fx-green); }\n\n/* ---------- Overlay ---------- */\n\n.fx-app { pointer-events: auto; }\n\n.fx-app {\n  position: fixed;\n  inset: 0;\n  display: flex;\n  flex-direction: column;\n  background: var(--fx-bg);\n  color: var(--fx-ink);\n  opacity: 0;\n  visibility: hidden;\n  transform: translateY(8px);\n  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;\n  pointer-events: none;\n}\n\n.fx-app.is-open {\n  opacity: 1;\n  visibility: visible;\n  transform: none;\n  pointer-events: auto;\n}\n\n.fx-app a { color: inherit; text-decoration: none; }\n.fx-app button, .fx-app input, .fx-app select { font-family: inherit; }\n\n/* Kopf */\n\n.fx-top {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: 20px;\n  height: 68px;\n  padding: 0 22px;\n  background: #fff;\n  border-bottom: 1px solid var(--fx-line);\n}\n\n.fx-brand { display: flex; align-items: center; gap: 10px; min-width: 168px; }\n\n.fx-logo {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  border-radius: 10px;\n  background: var(--fx-green);\n  color: #fff;\n  font: 700 14px/1 \"Geist Mono\", ui-monospace, monospace;\n}\n\n.fx-brandtext { display: flex; flex-direction: column; gap: 1px; }\n.fx-brandtext b { font-size: 14px; letter-spacing: -0.01em; }\n.fx-brandtext small { font-size: 10.5px; color: var(--fx-muted); letter-spacing: 0.02em; }\n\n.fx-search {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  gap: 9px;\n  height: 42px;\n  padding: 0 12px;\n  background: var(--fx-soft);\n  border: 1px solid transparent;\n  border-radius: 11px;\n  color: var(--fx-muted);\n  transition: border-color 0.15s ease, background 0.15s ease;\n}\n\n.fx-search:focus-within { background: #fff; border-color: var(--fx-green); }\n\n.fx-search input {\n  flex: 1;\n  min-width: 0;\n  border: 0;\n  outline: 0;\n  background: transparent;\n  color: var(--fx-ink);\n  font-size: 14px;\n}\n\n.fx-search input::placeholder { color: #98a29c; }\n.fx-search kbd, .fx-close kbd {\n  font: 500 10.5px/1 \"Geist Mono\", ui-monospace, monospace;\n  color: #8b958f;\n  background: #fff;\n  border: 1px solid var(--fx-line);\n  border-radius: 5px;\n  padding: 3px 5px;\n}\n\n.fx-close {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  height: 36px;\n  padding: 0 9px;\n  border: 1px solid var(--fx-line);\n  border-radius: 9px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 12.5px;\n  cursor: pointer;\n}\n\n.fx-close:hover { background: var(--fx-soft); }\n\n/* Body */\n\n.fx-body {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 272px minmax(0, 1fr);\n  min-height: 0;\n}\n\n.fx-side {\n  overflow-y: auto;\n  padding: 18px 18px 28px;\n  background: #fff;\n  border-right: 1px solid var(--fx-line);\n}\n\n.fx-side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }\n.fx-countbox { display: flex; align-items: baseline; gap: 6px; }\n.fx-countbox b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }\n.fx-countbox span { font-size: 12px; color: var(--fx-muted); }\n\n.fx-reset {\n  border: 0;\n  background: none;\n  padding: 0;\n  color: var(--fx-green);\n  font-size: 11.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n\n.fx-reset:hover { text-decoration: underline; }\n\n.fx-section { border-top: 1px solid #eef1ee; }\n\n.fx-section-head {\n  width: 100%;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 14px 0;\n  border: 0;\n  background: none;\n  color: #3f4a44;\n  font-size: 11.5px;\n  font-weight: 650;\n  letter-spacing: 0.07em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.fx-section-head i {\n  width: 7px;\n  height: 7px;\n  border-right: 1.5px solid #8b958f;\n  border-bottom: 1.5px solid #8b958f;\n  transform: rotate(45deg) translateY(-2px);\n  transition: transform 0.18s ease;\n}\n\n.fx-section.fx-collapsed .fx-section-head i { transform: rotate(-45deg); }\n.fx-section.fx-collapsed .fx-section-body,\n.fx-section.fx-collapsed .fx-mini-search { display: none; }\n\n.fx-section-body { padding-bottom: 14px; }\n\n.fx-mini-search {\n  width: 100%;\n  height: 30px;\n  margin-bottom: 8px;\n  padding: 0 9px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  font-size: 12.5px;\n  outline: 0;\n  background: #fff;\n}\n\n.fx-mini-search:focus { border-color: var(--fx-green); }\n\n.fx-checklist { max-height: 264px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }\n.fx-checklist::-webkit-scrollbar { width: 6px; }\n.fx-checklist::-webkit-scrollbar-thumb { background: #d9dfda; border-radius: 99px; }\n\n.fx-check {\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 4px;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 13px;\n}\n\n.fx-check:hover { background: var(--fx-soft); }\n.fx-check.is-zero { opacity: 0.45; }\n.fx-check input { width: 14px; height: 14px; margin: 0; accent-color: var(--fx-green); }\n.fx-flag { font-size: 14px; line-height: 1; }\n.fx-checkname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.fx-checkcount { font-size: 11px; color: #98a29c; font-variant-numeric: tabular-nums; }\n\n.fx-producer {\n  width: 100%;\n  height: 34px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  font-size: 12.5px;\n  color: var(--fx-ink);\n  outline: 0;\n}\n\n.fx-producer:focus { border-color: var(--fx-green); }\n\n.fx-rangevalue { margin-bottom: 8px; font-size: 12px; color: var(--fx-muted); }\n.fx-app input[type=\"range\"] { width: 100%; accent-color: var(--fx-green); }\n\n.fx-numberrow { display: flex; align-items: center; gap: 6px; }\n.fx-numberrow input {\n  width: 70px;\n  height: 32px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  font-size: 12.5px;\n  outline: 0;\n}\n.fx-numberrow input:focus { border-color: var(--fx-green); }\n.fx-dash { color: #98a29c; font-size: 12px; }\n\n.fx-seg {\n  display: grid;\n  grid-auto-flow: column;\n  grid-auto-columns: 1fr;\n  gap: 3px;\n  padding: 3px;\n  background: var(--fx-soft);\n  border-radius: 9px;\n}\n\n.fx-segbtn {\n  border: 0;\n  border-radius: 7px;\n  background: transparent;\n  padding: 7px 4px;\n  font-size: 11.5px;\n  font-weight: 550;\n  color: #5c665f;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n.fx-segbtn.is-active { background: #fff; color: var(--fx-ink); box-shadow: 0 1px 2px rgba(17, 21, 18, 0.1); }\n\n.fx-switch { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13px; }\n.fx-switch input { position: absolute; opacity: 0; pointer-events: none; }\n.fx-knob {\n  position: relative;\n  width: 34px;\n  height: 20px;\n  border-radius: 999px;\n  background: #d8ded9;\n  transition: background 0.16s ease;\n  flex: none;\n}\n.fx-knob::after {\n  content: \"\";\n  position: absolute;\n  top: 3px;\n  left: 3px;\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  background: #fff;\n  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);\n  transition: transform 0.16s ease;\n}\n.fx-switch input:checked + .fx-knob { background: var(--fx-green); }\n.fx-switch input:checked + .fx-knob::after { transform: translateX(14px); }\n\n.fx-datanote { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eef1ee; font-size: 10.5px; color: #a4ada7; line-height: 1.4; }\n\n/* Main */\n\n.fx-main { overflow-y: auto; padding: 18px 24px 70px; }\n\n.fx-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }\n.fx-resulttext { font-size: 12.5px; color: var(--fx-muted); }\n.fx-tools { display: flex; align-items: center; gap: 8px; }\n\n.fx-select { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--fx-muted); }\n.fx-select select {\n  height: 32px;\n  padding: 0 8px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 12.5px;\n  outline: 0;\n}\n\n.fx-iconbtn {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--fx-line);\n  border-radius: 8px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 15px;\n  cursor: pointer;\n}\n.fx-iconbtn:hover { background: var(--fx-soft); }\n\n.fx-mobilefilter { display: none; }\n\n.fx-loading { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 12px; color: var(--fx-muted); }\n.fx-progress { flex: 1; height: 3px; border-radius: 99px; background: #e6ebe7; overflow: hidden; }\n.fx-progress i { display: block; height: 100%; width: 8%; background: var(--fx-green); border-radius: 99px; transition: width 0.3s ease; }\n\n.fx-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));\n  gap: 16px;\n}\n\n.fx-grid.fx-grid-empty { display: none; }\n\n.fx-card {\n  display: flex;\n  flex-direction: column;\n  background: #fff;\n  border: 1px solid var(--fx-line);\n  border-radius: 14px;\n  overflow: hidden;\n  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;\n}\n\n.fx-card:hover {\n  transform: translateY(-2px);\n  border-color: #d5ded8;\n  box-shadow: 0 10px 24px rgba(17, 21, 18, 0.08);\n}\n\n.fx-thumb { position: relative; aspect-ratio: 1 / 1; background: var(--fx-soft); }\n.fx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }\n\n.fx-orgbadge {\n  position: absolute;\n  top: 8px;\n  left: 8px;\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  max-width: calc(100% - 16px);\n  padding: 4px 8px;\n  background: rgba(255, 255, 255, 0.93);\n  -webkit-backdrop-filter: blur(6px);\n  backdrop-filter: blur(6px);\n  border: 1px solid rgba(17, 21, 18, 0.06);\n  border-radius: 999px;\n  font-size: 10.5px;\n  font-weight: 600;\n  color: #2c342f;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.fx-orgbadge .fx-flag { font-size: 12px; }\n\n.fx-soldout {\n  position: absolute;\n  left: 8px;\n  bottom: 8px;\n  padding: 3px 7px;\n  border-radius: 6px;\n  background: rgba(17, 21, 18, 0.72);\n  color: #fff;\n  font-size: 10px;\n  letter-spacing: 0.01em;\n}\n\n.fx-cardbody { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; }\n\n.fx-cardprod {\n  font-size: 10px;\n  font-weight: 600;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  color: #8b958f;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.fx-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.25;\n  letter-spacing: -0.005em;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n  min-height: 35px;\n}\n\n.fx-meta { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--fx-muted); }\n.fx-dot { color: #c3cbc6; }\n\n.fx-tag {\n  align-self: flex-start;\n  margin-top: 2px;\n  padding: 2px 7px;\n  border-radius: 999px;\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-size: 10px;\n  font-weight: 600;\n}\n\n.fx-foot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }\n.fx-price b { font-size: 15px; letter-spacing: -0.01em; }\n.fx-price small { font-size: 10.5px; color: var(--fx-muted); font-weight: 500; }\n.fx-rating { font-size: 11.5px; color: #8a6d1f; }\n\n.fx-empty {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 5px;\n  padding: 90px 20px;\n  color: var(--fx-muted);\n  font-size: 12.5px;\n}\n.fx-empty b { font-size: 16px; color: var(--fx-ink); }\n\n.fx-more { display: flex; justify-content: center; padding: 26px 0 0; }\n\n.fx-btn {\n  height: 38px;\n  padding: 0 18px;\n  border: 1px solid var(--fx-line);\n  border-radius: 10px;\n  background: #fff;\n  color: var(--fx-ink);\n  font-size: 13px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-btn:hover { background: var(--fx-soft); }\n\n/* Detailseite */\n\n.fx-detail-line { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 10px 0 4px; }\n\n.fx-detail-badge {\n  display: inline-flex;\n  align-items: center;\n  gap: 7px;\n  padding: 6px 12px;\n  border: 1px solid #cfe3dc;\n  border-radius: 999px;\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-detail-badge:hover { background: #e2f0ea; }\n\n.fx-detail-link {\n  border: 0;\n  background: none;\n  padding: 0;\n  color: var(--fx-green);\n  font-size: 12.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n.fx-detail-link:hover { text-decoration: underline; }\n\n/* ---------- Responsive ---------- */\n\n@media (max-width: 980px) {\n  .fx-top { height: 60px; padding: 0 12px; gap: 10px; }\n  .fx-brand { min-width: 0; }\n  .fx-brandtext { display: none; }\n  .fx-search { height: 38px; }\n  .fx-search kbd { display: none; }\n  .fx-close kbd { display: none; }\n  .fx-body { grid-template-columns: 1fr; }\n  .fx-main { padding: 14px 12px 60px; }\n\n  .fx-side {\n    position: fixed;\n    z-index: 3;\n    top: 60px;\n    bottom: 0;\n    left: 0;\n    width: 286px;\n    transform: translateX(-102%);\n    transition: transform 0.22s ease;\n    box-shadow: 0 10px 40px rgba(17, 21, 18, 0.18);\n  }\n  .fx-side.fx-side-open { transform: none; }\n\n  .fx-mobilefilter {\n    display: inline-flex;\n    align-items: center;\n    height: 32px;\n    padding: 0 11px;\n    border: 1px solid var(--fx-line);\n    border-radius: 8px;\n    background: #fff;\n    font-size: 12.5px;\n    font-weight: 600;\n    cursor: pointer;\n  }\n\n  .fx-select span { display: none; }\n  .fx-grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }\n  .fx-name { font-size: 12.5px; min-height: 31px; }\n  .fx-foot { flex-direction: column; align-items: flex-start; gap: 2px; }\n  .fx-launcher { right: 14px; bottom: 14px; }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .fx-app, .fx-launcher, .fx-card { transition: none; }\n}\n\n\n/* hidden-Attribut darf nicht von display-Regeln überstimmt werden */\n.fx-app [hidden] { display: none !important; }\n\n/* ---------- Kategorien ---------- */\n\n.fx-tabs {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  height: 46px;\n  padding: 0 22px;\n  background: #fff;\n  border-bottom: 1px solid var(--fx-line);\n}\n\n.fx-tab {\n  border: 0;\n  background: none;\n  padding: 6px 12px;\n  border-radius: 8px;\n  font-size: 13px;\n  font-weight: 600;\n  color: var(--fx-muted);\n  cursor: pointer;\n}\n\n.fx-tab:hover { background: var(--fx-soft); }\n.fx-tab.is-active { background: #edf5f2; color: var(--fx-green-dark); }\n\n/* ---------- Karten-Aktionen ---------- */\n\n.fx-actions {\n  position: absolute;\n  top: 8px;\n  right: 8px;\n  display: flex;\n  gap: 4px;\n  opacity: 0.55;\n  transition: opacity 0.15s ease;\n}\n\n.fx-card:hover .fx-actions,\n.fx-actions:focus-within { opacity: 1; }\n\n.fx-actbtn {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n  display: grid;\n  place-items: center;\n  border: 1px solid rgba(17, 21, 18, 0.06);\n  border-radius: 999px;\n  background: rgba(255, 255, 255, 0.93);\n  -webkit-backdrop-filter: blur(6px);\n  backdrop-filter: blur(6px);\n  color: #5c665f;\n  font-size: 12px;\n  line-height: 1;\n  cursor: pointer;\n}\n\n.fx-actbtn.is-on { background: var(--fx-green); border-color: var(--fx-green); color: #fff; }\n\n.fx-offers {\n  align-self: flex-start;\n  margin: 2px 0 0;\n  padding: 0;\n  border: 0;\n  background: none;\n  min-height: 12px;\n  font-size: 10.5px;\n  font-weight: 600;\n  color: var(--fx-green-dark);\n  text-align: left;\n  cursor: pointer;\n  text-decoration: underline;\n  text-decoration-color: rgba(25, 121, 109, 0.25);\n  text-underline-offset: 2px;\n}\n\n.fx-offers:hover { text-decoration-color: var(--fx-green); }\n\n.fx-csvbtn {\n  width: auto;\n  padding: 0 9px;\n  font-size: 10.5px;\n  font-weight: 700;\n  letter-spacing: 0.04em;\n}\n\n/* ---------- Modals ---------- */\n\n.fx-modal {\n  position: fixed;\n  inset: 0;\n  z-index: 5;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  padding: 22px;\n  background: rgba(17, 21, 18, 0.42);\n}\n\n.fx-modal[hidden] { display: none !important; }\n\n.fx-modal-card {\n  width: min(520px, 100%);\n  max-height: 82vh;\n  overflow: auto;\n  background: #fff;\n  border-radius: 16px;\n  box-shadow: 0 24px 60px rgba(17, 21, 18, 0.28);\n}\n\n.fx-modal-inner { padding: 18px 20px 20px; }\n\n.fx-modal-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }\n.fx-modal-head b { font-size: 16px; letter-spacing: -0.01em; }\n.fx-modal-head span {\n  flex: 1;\n  min-width: 0;\n  font-size: 12px;\n  color: var(--fx-muted);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.fx-modal-close {\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: 8px;\n  background: var(--fx-soft);\n  color: #5c665f;\n  font-size: 12px;\n  cursor: pointer;\n}\n\n.fx-modal-note { margin-bottom: 10px; font-size: 11.5px; line-height: 1.5; color: var(--fx-muted); }\n\n.fx-modal-summary {\n  display: flex;\n  align-items: baseline;\n  gap: 8px;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  background: #edf5f2;\n  border-radius: 10px;\n}\n.fx-modal-summary b { font-size: 18px; color: var(--fx-green-dark); }\n.fx-modal-summary span { font-size: 11.5px; color: #3f4a44; }\n\n.fx-offerlist { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; }\n\n.fx-offer {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  padding: 8px 4px;\n  border-bottom: 1px solid #eef1ee;\n  font-size: 12.5px;\n}\n\n.fx-offer-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }\n.fx-offer-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.fx-offer-city { font-size: 10.5px; color: var(--fx-muted); }\n.fx-offer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }\n.fx-offer-state { font-size: 10px; color: #a4ada7; }\n.fx-offer-state.is-avail { color: var(--fx-green); }\n\n.fx-modal-actions { display: flex; gap: 8px; margin-top: 12px; }\n.fx-btn-primary { background: var(--fx-green); border-color: var(--fx-green); color: #fff; }\n.fx-btn-primary:hover { background: var(--fx-green-dark); }\n\n.fx-toast {\n  position: fixed;\n  left: 50%;\n  bottom: 26px;\n  z-index: 6;\n  max-width: 90vw;\n  padding: 10px 14px;\n  border-radius: 10px;\n  background: #111512;\n  color: #fff;\n  font-size: 12.5px;\n  opacity: 0;\n  transform: translate(-50%, 14px);\n  pointer-events: none;\n  transition: opacity 0.2s ease, transform 0.2s ease;\n}\n.fx-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }\n.fx-toast-good { background: var(--fx-green); }\n\n@media (max-width: 980px) {\n  .fx-tabs { padding: 0 12px; height: 44px; }\n  .fx-actions { opacity: 1; }\n  .fx-modal { padding: 12px; }\n  .fx-modal-card { max-height: 88vh; }\n}\n\n/* ---------- Attribut-Filter ---------- */\n\n.fx-attr-host { display: block; }\n\n.fx-attr-section .fx-section-head span { letter-spacing: 0.05em; }\n\n.fx-attr-section .fx-checklist { max-height: 210px; }\n\n.fx-chiplink {\n  border: 0;\n  background: none;\n  padding: 4px 0 0;\n  color: var(--fx-green);\n  font-size: 11px;\n  font-weight: 600;\n  cursor: pointer;\n}\n\n.fx-chiplink:hover { text-decoration: underline; }\n\n.fx-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 0 0 14px;\n}\n\n.fx-chip {\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  padding: 5px 10px;\n  border: 1px solid #cfe3dc;\n  border-radius: 999px;\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-size: 11.5px;\n  font-weight: 600;\n  cursor: pointer;\n}\n\n.fx-chip:hover { background: #e0efe8; border-color: var(--fx-green); }\n\n/* ---------- Vergleich ---------- */\n\n.fx-tray {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 10px 18px;\n  background: #fff;\n  border-top: 1px solid var(--fx-line);\n  box-shadow: 0 -8px 24px rgba(17, 21, 18, 0.06);\n}\n\n.fx-tray[hidden] { display: none !important; }\n\n.fx-tray-label {\n  font-size: 11px;\n  font-weight: 700;\n  color: var(--fx-green-dark);\n  background: #edf5f2;\n  border-radius: 999px;\n  padding: 4px 8px;\n}\n\n.fx-tray-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }\n\n.fx-tray-chip {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  max-width: 220px;\n  padding: 5px 8px 5px 11px;\n  border: 1px solid var(--fx-line);\n  border-radius: 999px;\n  background: var(--fx-soft);\n  font-size: 11.5px;\n  white-space: nowrap;\n  overflow: hidden;\n}\n\n.fx-tray-x {\n  border: 0;\n  background: none;\n  padding: 0 2px;\n  color: #8b958f;\n  font-size: 13px;\n  line-height: 1;\n  cursor: pointer;\n}\n\n.fx-tray-x:hover { color: var(--fx-ink); }\n\n.fx-tray-clear { height: 32px; padding: 0 12px; font-size: 12px; }\n\n.fx-modal-wide { width: min(880px, 100%); }\n\n.fx-modal-inner.fx-modal-wide { width: min(880px, 100%); }\n\n.fx-modal-card:has(.fx-modal-wide) { width: min(900px, 100%); }\n\n.fx-compare {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 12.5px;\n}\n\n.fx-compare {\n  table-layout: fixed;\n}\n\n.fx-compare th,\n.fx-compare td {\n  padding: 9px 10px;\n  text-align: left;\n  vertical-align: top;\n  border-bottom: 1px solid #eef1ee;\n  overflow-wrap: anywhere;\n}\n\n.fx-compare thead th { border-bottom: 2px solid var(--fx-line); padding-bottom: 10px; }\n\n.fx-cmp-key {\n  width: 132px;\n  font-size: 11px;\n  font-weight: 600;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  color: #8b958f;\n  white-space: nowrap;\n}\n\n.fx-cmp-title { font-weight: 650; font-size: 13px; }\n.fx-cmp-title:hover { color: var(--fx-green); }\n.fx-cmp-sub { margin-top: 2px; font-size: 10.5px; color: var(--fx-muted); }\n\n.fx-cmp-best {\n  background: #edf5f2;\n  color: var(--fx-green-dark);\n  font-weight: 700;\n  box-shadow: inset 0 0 0 1px #d7e9e2;\n}\n\n@media (max-width: 980px) {\n  .fx-tray { padding: 8px 12px; flex-wrap: wrap; }\n  .fx-tray-chips { order: 3; width: 100%; flex-basis: 100%; }\n  .fx-compare { font-size: 11.5px; }\n  .fx-compare th, .fx-compare td { padding: 7px 6px; }\n  .fx-cmp-key { width: 92px; }\n}\n";
+})();
+
+(() => {
+'use strict';
+/**
+ * flowzz+ Attribut-Index laden und Attribute filtern.
+ * Wird in content.js eingebunden (Build inlined beide Teile).
+ *
+ * Index-Format (attrs.json.gz, entpackt):
+ * {
+ *   version, generated, count,
+ *   catalog: { id: {slug, cat, name, origin, producer, thc, cbd, price, avail, genetic, rating} },
+ *   labels:  { id: {label, type} },
+ *   products:{ id: { e:[ids], t:[ids], m:[ids], s:[ids], tp:[ids] } }
+ * }
+ */
+
+const FX_ATTR_TYPES = [
+  { key: 'e', type: 'effect', title: 'Effekte', source: 'effect' },
+  { key: 't', type: 'taste', title: 'Geschmack', source: 'taste' },
+  { key: 'm', type: 'medicalUsage', title: 'Medizinische Wirkung', source: 'medicalUsage' },
+  { key: 's', type: 'sideEffects', title: 'Nebenwirkungen', source: 'sideEffects' },
+  { key: 'tp', type: 'terpene', title: 'Terpene', source: 'terpene' }
+];
+
+const ATTR_PREFIX = { e: 'eff', t: 'taste', m: 'med', s: 'side', tp: 'terp' };
+const PREFIX_ATTR = { eff: 'e', taste: 't', med: 'm', side: 's', terp: 'tp' };
+
+const gzipB64 = (b64) => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (typeof DecompressionStream === 'undefined') {
+    return Promise.reject(new Error('DecompressionStream fehlt'));
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+};
+
+/**
+ * Lädt den Index aus dem Extension-Bundle (gzip) oder per fetch von der URL.
+ * Gibt { catalog, labels, products, version } zurück.
+ */
+async function fxLoadIndex({ base64, url, timeoutMs = 8000 }) {
+  const parse = (text) => {
+    const data = JSON.parse(text);
+    if (!data || !data.products) throw new Error('Index ohne products');
+    return data;
+  };
+  if (base64) {
+    return parse(await gzipB64(base64));
+  }
+  if (url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, cache: 'no-cache' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const buf = await res.arrayBuffer();
+      // gzip magic 1f 8b?
+      const head = new Uint8Array(buf.slice(0, 2));
+      if (head[0] === 0x1f && head[1] === 0x8b) {
+        if (typeof DecompressionStream === 'undefined') throw new Error('kein gunzip');
+        const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+        return parse(await new Response(stream).text());
+      }
+      return parse(new TextDecoder().decode(buf));
+    } finally {
+      clearTimeout(t);
+    }
+  }
+  throw new Error('kein Index');
+}
+
+/** Produkt-Attribute als Set-Schnitt prüfen. */
+function fxMatchesAttrs(attrs, selected) {
+  for (const key of Object.keys(selected)) {
+    const wanted = selected[key];
+    if (!wanted || !wanted.size) continue;
+    const have = attrs && attrs[key];
+    if (!have || !have.length) return false;
+    let hit = false;
+    for (const id of have) {
+      if (wanted.has(id)) { hit = true; break; }
+    }
+    if (!hit) return false;
+  }
+  return true;
+}
+
+/** Label für eine Attribut-ID im richtigen Namensraum (Terpene getrennt). */
+function fxLabelOf(index, key, id) {
+  if (!index) return String(id);
+  if (key === 'tp') {
+    const t = index.terpLabels && index.terpLabels[String(id)];
+    if (t) return t;
+  }
+  const l = index.labels && index.labels[String(id)];
+  if (l && typeof l === 'object') return l.label || String(id);
+  if (typeof l === 'string') return l;
+  return String(id);
+}
+
+/** Labels einer Kategorie, sortiert nach Häufigkeit im aktuellen Index. */
+function fxLabelList(index, key) {
+  const counts = new Map();
+  for (const attrs of Object.values(index.products)) {
+    for (const id of (attrs[key] || [])) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([id, n]) => ({ id, n, label: fxLabelOf(index, key, id) }))
+    .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'de'));
+}
+
+if (typeof window !== 'undefined') {
+  window.fxLoadIndex = fxLoadIndex;
+  window.fxMatchesAttrs = fxMatchesAttrs;
+  window.fxLabelList = fxLabelList;
+  window.fxLabelOf = fxLabelOf;
+  window.FX_ATTR_TYPES = FX_ATTR_TYPES;
+  window.ATTR_PREFIX = ATTR_PREFIX;
+  window.PREFIX_ATTR = PREFIX_ATTR;
+}
+
+})();
+
+/* flowzz+ · Attribut-Filter
+ * Bindet die Index-Datei (attrs.json.gz) ein und stellt die Filter-Sektionen
+ * für Effekte, Geschmack, medizinische Wirkung, Nebenwirkungen und Terpene bereit.
+ * Erwartet window.fxLoadIndex / fxLabelList / fxMatchesAttrs aus attrs.js.
+ */
+(() => {
+  if (window.__FX_ATTRS_UI__) return;
+  window.__FX_ATTRS_UI__ = true;
+
+  const ATTR_URL = (typeof window !== 'undefined' && window.__FX_ATTR_URL__) || 'https://raw.githubusercontent.com/CRZX1337/flowzz-plus/main/data/attrs.json.gz';
+  const ATTR_CACHE_KEY = 'fx_attrs_v1';
+  const ATTR_TTL = 24 * 60 * 60 * 1000;
+  const CHUNK = 60;
+
+  const index = {
+    data: null,
+    loading: false,
+    error: null
+  };
+
+  const openSections = new Set();
+
+  /* ---------- Laden ---------- */
+
+  async function getCached() {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((res) => chrome.storage.local.get(ATTR_CACHE_KEY, (r) => res(r ? r[ATTR_CACHE_KEY] : null)));
+    }
+    try { return JSON.parse(localStorage.getItem(ATTR_CACHE_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  async function setCached(value) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((res) => chrome.storage.local.set({ [ATTR_CACHE_KEY]: value }, res));
+    }
+    try { localStorage.setItem(ATTR_CACHE_KEY, JSON.stringify(value)); } catch (e) {}
+  }
+
+  async function loadIndex({ force } = {}) {
+    if (index.data || index.loading) return index.data;
+    index.loading = true;
+
+    if (!force) {
+      const cached = await getCached();
+      if (cached && cached.ts && Date.now() - cached.ts < ATTR_TTL && cached.payload) {
+        index.data = cached.payload;
+        index.loading = false;
+        return index.data;
+      }
+    }
+
+    try {
+      const payload = await window.fxLoadIndex({ url: ATTR_URL });
+      index.data = payload;
+      await setCached({ ts: Date.now(), payload });
+    } catch (e) {
+      index.error = e;
+    } finally {
+      index.loading = false;
+    }
+    return index.data;
+  }
+
+  /* ---------- Section-Bau ---------- */
+
+  function buildSection(type, ctx) {
+    const node = document.createElement('section');
+    node.className = 'fx-section fx-attr-section';
+    node.dataset.attr = type.key;
+
+    const head = document.createElement('button');
+    head.className = 'fx-section-head';
+    head.type = 'button';
+    head.innerHTML = '<span>' + type.title + '</span><i></i>';
+    head.addEventListener('click', () => {
+      node.classList.toggle('fx-collapsed');
+      if (!node.classList.contains('fx-collapsed')) ensureList();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'fx-section-body';
+
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'fx-mini-search';
+    search.placeholder = type.title + ' suchen …';
+
+    const list = document.createElement('div');
+    list.className = 'fx-checklist';
+
+    const more = document.createElement('button');
+    more.className = 'fx-chiplink';
+    more.type = 'button';
+    more.hidden = true;
+
+    body.append(search, list, more);
+    node.append(head, body);
+
+    const state = { query: '', shown: CHUNK, items: [] };
+
+    function render() {
+      const selected = ctx.getSelected(type.key);
+      list.textContent = '';
+      const q = state.query.toLowerCase();
+      const filtered = state.items.filter((it) => !q || it.label.toLowerCase().includes(q));
+      const shown = filtered.slice(0, state.shown);
+      const frag = document.createDocumentFragment();
+      for (const item of shown) {
+        const row = document.createElement('label');
+        row.className = 'fx-check';
+        if (ctx.countFor(type.key, item.id) === 0 && !selected.has(item.id)) row.classList.add('is-zero');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = selected.has(item.id);
+        cb.addEventListener('change', () => ctx.toggle(type.key, item.id, cb.checked));
+        const name = document.createElement('span');
+        name.className = 'fx-checkname';
+        name.textContent = item.label;
+        const count = document.createElement('span');
+        count.className = 'fx-checkcount';
+        count.textContent = String(ctx.countFor(type.key, item.id));
+        row.append(cb, name, count);
+        frag.append(row);
+      }
+      list.append(frag);
+      more.hidden = filtered.length <= state.shown;
+      more.textContent = '+' + (filtered.length - state.shown) + ' weitere';
+    }
+
+    function ensureList() {
+      if (state.items.length || !index.data) return;
+      state.items = window.fxLabelList(index.data, type.key);
+      render();
+    }
+
+    search.addEventListener('input', () => {
+      state.query = search.value.trim();
+      state.shown = CHUNK;
+      ensureList();
+      render();
+    });
+
+    more.addEventListener('click', () => {
+      state.shown += CHUNK * 2;
+      render();
+    });
+
+    node.classList.add('fx-collapsed');
+
+    return {
+      node,
+      type,
+      refresh: () => {
+        if (!index.data) return;
+        ensureList();
+        if (!node.classList.contains('fx-collapsed')) render();
+      },
+      show: () => { node.hidden = false; },
+      hide: () => { node.hidden = true; },
+      reset: () => { state.shown = CHUNK; state.query = ''; search.value = ''; render(); },
+      count: () => {
+        const sel = ctx.getSelected(type.key);
+        if (sel.size) {
+          head.querySelector('span').textContent = type.title + ' · ' + sel.size;
+        } else {
+          head.querySelector('span').textContent = type.title;
+        }
+      }
+    };
+  }
+
+  /**
+   * Baut alle Attribut-Sektionen und hängt sie in den Sidebar-Container.
+   * ctx: {
+   *   getSelected(key) -> Set,
+   *   toggle(key, id, on) -> void,
+   *   countFor(key, id) -> number,
+   *   onChange() -> void,
+   *   notify(text)
+   * }
+   */
+  function mount(container, ctx) {
+    const sections = {};
+    const wrap = document.createElement('div');
+    wrap.className = 'fx-attr-wrap';
+    for (const type of window.FX_ATTR_TYPES) {
+      const sec = buildSection(type, ctx);
+      sections[type.key] = sec;
+      wrap.append(sec.node);
+    }
+    container.append(wrap);
+
+    loadIndex().then(() => {
+      if (!index.data) {
+        wrap.querySelectorAll('.fx-attr-section').forEach((n) => { n.hidden = true; });
+        ctx.notify('Attribut-Index nicht verfügbar – Filter eingeschränkt.');
+        return;
+      }
+      for (const sec of Object.values(sections)) {
+        sec.show();
+        sec.refresh();
+        sec.count();
+      }
+    });
+
+    return {
+      sections,
+      refresh() {
+        for (const sec of Object.values(sections)) {
+          sec.refresh();
+          sec.count();
+        }
+      },
+      reset() {
+        for (const sec of Object.values(sections)) sec.reset();
+      },
+      get index() { return index.data; }
+    };
+  }
+
+  window.fxAttrs = { mount, loadIndex, get index() { return index.data; } };
 })();
 
 /* flowzz+ · Herkunft, Preise & Suche
@@ -30,7 +377,7 @@
   const CACHE_TTL = 6 * 60 * 60 * 1000;
   const VENDOR_TTL = 24 * 60 * 60 * 1000;
   const PAGE_STEP = 60;
-  const VERSION = '1.1.1';
+  const VERSION = '1.3.0';
 
   const CATEGORIES = [
     { id: 'flowers', label: 'Blüten', endpoint: '/api/v1/views/flowers', pricePath: '2', file: 'blueeten' },
@@ -40,7 +387,6 @@
 
   const HAS_CHROME = typeof chrome !== 'undefined' && chrome && chrome.runtime && chrome.runtime.id;
   const CSS_URL = HAS_CHROME ? chrome.runtime.getURL('overlay.css') : null;
-  const CAN_NOTIFY = typeof chrome !== 'undefined' && chrome.notifications && chrome.notifications.create;
 
   /* ---------- Herkunft normalisieren ---------- */
 
@@ -149,7 +495,7 @@
     facetsBuilt: false,
     category: 'flowers',
     favorites: new Set(),
-    alerts: {},
+    compare: new Set(),
     prices: new Map(),
     pricesLoading: false,
     vendors: null,
@@ -164,7 +510,8 @@
       irr: '',
       onlyAvail: false,
       onlyFavs: false,
-      sort: 'popularity'
+      sort: 'popularity',
+      attrs: { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() }
     }
   };
 
@@ -376,21 +723,6 @@
 
   /* ---------- Favoriten & Alarme ---------- */
 
-  async function loadUserData() {
-    const favs = await store.get('fx_favs_v1');
-    if (Array.isArray(favs)) state.favorites = new Set(favs.map(Number));
-    const alerts = await store.get('fx_alerts_v1');
-    if (alerts && typeof alerts === 'object') state.alerts = alerts;
-  }
-
-  async function saveFavorites() {
-    await store.set('fx_favs_v1', [...state.favorites]);
-  }
-
-  async function saveAlerts() {
-    await store.set('fx_alerts_v1', state.alerts);
-  }
-
   function toggleFavorite(p) {
     if (state.favorites.has(p.id)) state.favorites.delete(p.id);
     else state.favorites.add(p.id);
@@ -399,52 +731,13 @@
     renderGrid();
   }
 
-  function alertFor(p) {
-    return state.alerts[String(p.id)] || null;
+  async function loadUserData() {
+    const favs = await store.get('fx_favs_v1');
+    if (Array.isArray(favs)) state.favorites = new Set(favs.map(Number));
   }
 
-  async function setAlert(p, target) {
-    if (target == null) {
-      delete state.alerts[String(p.id)];
-    } else {
-      state.alerts[String(p.id)] = {
-        id: p.id,
-        cat: p.cat,
-        slug: p.slug,
-        name: p.name,
-        target: Number(target),
-        lastPrice: p.price,
-        updatedAt: Date.now(),
-        notifiedAt: 0
-      };
-    }
-    await saveAlerts();
-    renderGrid();
-  }
-
-  async function checkAlerts() {
-    const alerts = Object.values(state.alerts);
-    if (!alerts.length) return;
-    const hits = alerts.filter((a) => a.target != null && a.lastPrice != null &&
-      a.lastPrice <= a.target && (!a.notifiedAt || Date.now() - a.notifiedAt > 24 * 60 * 60 * 1000));
-    if (!hits.length) return;
-    for (const a of hits) {
-      a.notifiedAt = Date.now();
-      if (CAN_NOTIFY) {
-        try {
-          chrome.notifications.create('fx-alert-' + a.id, {
-            type: 'basic',
-            iconUrl: HAS_CHROME ? chrome.runtime.getURL('icons/icon128.png') : '',
-            title: 'flowzz+ Preisalarm',
-            message: `${a.name}: jetzt ${eur(a.lastPrice)} / g (Ziel ${eur(a.target)})`,
-            priority: 1
-          });
-        } catch (e) { /* ignore */ }
-      } else {
-        toast(`${a.name}: ${eur(a.lastPrice)} / g erreicht`, 'good');
-      }
-    }
-    await saveAlerts();
+  async function saveFavorites() {
+    await store.set('fx_favs_v1', [...state.favorites]);
   }
 
   /* ---------- Filterlogik ---------- */
@@ -464,7 +757,41 @@
     if (f.irr === 'no' && p.irr) return false;
     if (f.irr === 'yes' && !p.irr) return false;
     if (f.onlyAvail && !p.avail) return false;
+    if (window.fxMatchesAttrs && !window.fxMatchesAttrs(state.attrOf(p.id), f.attrs)) return false;
     return true;
+  }
+
+  /** Attribute eines Produkts aus dem Index (oder null). */
+  function attrOf(id) {
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    if (!idx) return null;
+    return idx.products[String(id)] || null;
+  }
+
+  state.attrOf = attrOf;
+
+  /** Trefferzahl für ein Attribut, alle anderen Filter angewendet. */
+  function attrCount(key, id) {
+    const f = state.filters;
+    let n = 0;
+    for (const p of state.items) {
+      if (!matches(p, f)) continue;
+      const a = attrOf(p.id);
+      if (a && a[key] && a[key].includes(id)) n++;
+    }
+    return n;
+  }
+
+  function toggleAttr(key, id, on) {
+    const set = state.filters.attrs[key];
+    if (on) set.add(id); else set.delete(id);
+    state.visible = PAGE_STEP;
+    render();
+    syncURL();
+  }
+
+  function selectedAttrs(key) {
+    return state.filters.attrs[key];
   }
 
   function sorted(list) {
@@ -588,6 +915,7 @@
     ui.availSection = buildAvailSection();
     ui.favSection = buildFavSection();
 
+    ui.attrHost = el('div', 'fx-attr-host');
     ui.dataNote = el('div', 'fx-datanote', '');
     side.append(
       sideHead,
@@ -599,6 +927,7 @@
       ui.irrSection.node,
       ui.availSection.node,
       ui.favSection.node,
+      ui.attrHost,
       ui.dataNote
     );
 
@@ -653,7 +982,13 @@
     ui.progressBar = ui.progress.querySelector('i');
     ui.progressText = ui.progress.querySelector('span');
 
-    main.append(toolbar, ui.progress, ui.grid, ui.empty, moreWrap);
+    ui.chips = el('div', 'fx-chips');
+    ui.chips.hidden = true;
+    main.append(toolbar, ui.chips, ui.progress, ui.grid, ui.empty, moreWrap);
+
+    ui.tray = el('div', 'fx-tray');
+    ui.tray.hidden = true;
+    app.append(ui.tray);
     body.append(side, main);
     app.append(top, tabs, body);
     shadow.appendChild(app);
@@ -661,6 +996,16 @@
     ui.app = app;
     ui.input = input;
     ui.side = side;
+
+    if (window.fxAttrs) {
+      ui.attrs = window.fxAttrs.mount(ui.attrHost, {
+        getSelected: selectedAttrs,
+        toggle: toggleAttr,
+        countFor: attrCount,
+        onChange: render,
+        notify: toast
+      });
+    }
 
     ui.modal = el('div', 'fx-modal');
     ui.modal.hidden = true;
@@ -845,6 +1190,129 @@
     return { node: s.node, checkbox: cb, text };
   }
 
+  /* ---------- Vergleich ---------- */
+
+  function toggleCompare(p) {
+    if (state.compare.has(p.id)) {
+      state.compare.delete(p.id);
+    } else {
+      if (state.compare.size >= 4) { toast('Maximal 4 Produkte vergleichen'); return; }
+      state.compare.add(p.id);
+    }
+    renderCompareTray();
+    renderGrid();
+    syncURL();
+  }
+
+  function compareProducts() {
+    return [...state.compare].map((id) => state.items.find((p) => p.id === id)).filter(Boolean);
+  }
+
+  function renderCompareTray() {
+    if (!ui.tray) return;
+    const items = compareProducts();
+    ui.tray.hidden = items.length === 0;
+    ui.tray.textContent = '';
+    if (!items.length) return;
+
+    const label = el('span', 'fx-tray-label', items.length + '/4');
+    const chips = el('div', 'fx-tray-chips');
+    for (const p of items) {
+      const chip = el('span', 'fx-tray-chip');
+      chip.append(el('span', null, p.strain || p.name));
+      const x = el('button', 'fx-tray-x', '×');
+      x.type = 'button';
+      x.addEventListener('click', () => toggleCompare(p));
+      chip.append(x);
+      chips.append(chip);
+    }
+    const clear = el('button', 'fx-btn fx-tray-clear', 'Leeren');
+    clear.type = 'button';
+    clear.addEventListener('click', () => {
+      state.compare.clear();
+      renderCompareTray();
+      renderGrid();
+      syncURL();
+    });
+    const go = el('button', 'fx-btn fx-btn-primary', 'Vergleichen');
+    go.type = 'button';
+    go.disabled = items.length < 2;
+    go.addEventListener('click', openCompareDialog);
+
+    ui.tray.append(label, chips, clear, go);
+  }
+
+  function openCompareDialog() {
+    const items = compareProducts();
+    if (items.length < 2) { toast('Mindestens 2 Produkte auswählen'); return; }
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    const labelOf = (key, id) => (window.fxLabelOf ? window.fxLabelOf(idx, key, id) : String(id));
+
+    const head = el('div', 'fx-modal-head');
+    head.append(el('b', null, 'Vergleich'), el('span', null, items.length + ' Produkte'));
+    const close = el('button', 'fx-modal-close', '✕');
+    close.type = 'button';
+    close.addEventListener('click', closeModal);
+    head.append(close);
+
+    const body = el('div', 'fx-modal-body');
+    const table = el('table', 'fx-compare');
+    const thead = el('thead');
+    const hr = el('tr');
+    hr.append(el('th', 'fx-cmp-key', ''));
+    for (const p of items) {
+      const th = el('th');
+      const link = el('a', 'fx-cmp-title', p.strain || p.name);
+      link.href = '/product/' + p.slug;
+      th.append(link, el('div', 'fx-cmp-sub', p.producer || ''));
+      hr.append(th);
+    }
+    thead.append(hr);
+
+    const rows = [
+      ['Preis / g', (p) => (p.price == null ? '—' : eur(p.price)), 'min'],
+      ['THC', (p) => pct(p.thc), 'max'],
+      ['CBD', (p) => pct(p.cbd)],
+      ['Genetik', (p) => p.genetic || '—'],
+      ['Herkunft', (p) => (p.origin === 'Unbekannt' ? '—' : p.origin)],
+      ['Bestrahlung', (p) => (p.irr ? 'bestrahlt' : 'unbestrahlt')],
+      ['Verfügbar', (p) => (p.avail ? 'ja' : 'nein')],
+      ['Bewertung', (p) => (p.rating ? '★ ' + p.rating.toFixed(1) : '—'), 'max'],
+      ['Effekte', (p) => {
+        const a = idx && idx.products[String(p.id)];
+        return a && a.e ? a.e.slice(0, 4).map((id) => labelOf('e', id)).join(', ') : '—';
+      }],
+      ['Terpene', (p) => {
+        const a = idx && idx.products[String(p.id)];
+        return a && a.tp ? a.tp.slice(0, 4).map((id) => labelOf('tp', id)).join(', ') : '—';
+      }]
+    ];
+
+    const tbody = el('tbody');
+    for (const [label, fn, best] of rows) {
+      const tr = el('tr');
+      tr.append(el('td', 'fx-cmp-key', label));
+      const values = items.map(fn);
+      let bestIdx = -1;
+      if (best) {
+        const nums = items.map((p) => (best === 'min' ? (p.price == null ? Infinity : p.price) : (p.thc == null ? -1 : p.thc)));
+        const target = best === 'min' ? Math.min(...nums) : Math.max(...nums);
+        if (isFinite(target) && target !== (best === 'min' ? Infinity : -1)) bestIdx = nums.indexOf(target);
+      }
+      values.forEach((v, i) => {
+        const td = el('td', i === bestIdx ? 'fx-cmp-best' : '', v);
+        tr.append(td);
+      });
+      tbody.append(tr);
+    }
+    table.append(thead, tbody);
+    body.append(table);
+
+    const wrap = el('div', 'fx-modal-inner fx-modal-wide');
+    wrap.append(head, body);
+    openModal(wrap);
+  }
+
   /* ---------- Rendering ---------- */
 
   function render() {
@@ -913,6 +1381,7 @@
   function renderFacets() {
     const f = state.filters;
     if (!state.facetsBuilt && state.items.length) buildFacetLists();
+    if (ui.attrs) ui.attrs.refresh();
 
     const originCounts = facetCounts('origin');
     const originQuery = (ui.originSearch && ui.originSearch.value.trim().toLowerCase()) || '';
@@ -973,11 +1442,11 @@
     fav.type = 'button';
     fav.title = state.favorites.has(p.id) ? 'Favorit entfernen' : 'Zu Favoriten';
     fav.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(p); });
-    const bell = el('button', 'fx-actbtn' + (alertFor(p) ? ' is-on' : ''), '🔔');
-    bell.type = 'button';
-    bell.title = alertFor(p) ? 'Preisalarm bearbeiten' : 'Preisalarm setzen';
-    bell.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openAlertDialog(p); });
-    actions.append(fav, bell);
+    const cmp = el('button', 'fx-actbtn' + (state.compare.has(p.id) ? ' is-on' : ''), '⇄');
+    cmp.type = 'button';
+    cmp.title = state.compare.has(p.id) ? 'Aus Vergleich entfernen' : 'Zum Vergleich';
+    cmp.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(p); });
+    actions.append(fav, cmp);
     thumb.append(actions);
 
     const body = el('div', 'fx-cardbody');
@@ -1013,7 +1482,27 @@
     return a;
   }
 
+  function renderAttrChips() {
+    if (!ui.chips) return;
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    ui.chips.textContent = '';
+    if (!idx) return;
+    let any = false;
+    for (const key of Object.keys(state.filters.attrs)) {
+      for (const id of state.filters.attrs[key]) {
+        any = true;
+        const label = window.fxLabelOf ? window.fxLabelOf(idx, key, id) : String(id);
+        const chip = el('button', 'fx-chip', label + '  ×');
+        chip.type = 'button';
+        chip.addEventListener('click', () => toggleAttr(key, id, false));
+        ui.chips.append(chip);
+      }
+    }
+    ui.chips.hidden = !any;
+  }
+
   function renderGrid() {
+    renderAttrChips();
     const list = currentList();
     const grid = ui.grid;
     grid.textContent = '';
@@ -1132,55 +1621,6 @@
     bodyEl.append(el('div', 'fx-modal-note', 'Preise pro Gramm, Stand der Website. Alle Apotheken auf der Produktseite.'));
   }
 
-  function openAlertDialog(p) {
-    const existing = alertFor(p);
-    const head = el('div', 'fx-modal-head');
-    head.append(el('b', null, 'Preisalarm'), el('span', null, p.strain || p.name));
-    const close = el('button', 'fx-modal-close', '✕');
-    close.type = 'button';
-    close.addEventListener('click', closeModal);
-    head.append(close);
-
-    const bodyEl = el('div', 'fx-modal-body');
-    bodyEl.append(el('div', 'fx-modal-note', 'Aktueller Preis: ' + eur(p.price) + ' / g. Die Erweiterung prüft den Preis alle 3 Stunden und meldet sich, sobald dein Ziel erreicht ist.'));
-    const row = el('div', 'fx-numberrow');
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.step = '0.1';
-    input.min = '0';
-    input.placeholder = 'Ziel €/g';
-    input.value = existing ? String(existing.target) : (p.price != null ? String(Math.max(0.5, Math.floor(p.price * 0.9 * 10) / 10)) : '');
-    row.append(input);
-
-    const actions = el('div', 'fx-modal-actions');
-    const save = el('button', 'fx-btn fx-btn-primary', existing ? 'Alarm aktualisieren' : 'Alarm setzen');
-    save.type = 'button';
-    save.addEventListener('click', async () => {
-      const v = Number(String(input.value).replace(',', '.'));
-      if (!v || v <= 0) { toast('Bitte einen Zielpreis eingeben'); return; }
-      await setAlert(p, v);
-      closeModal();
-      toast('Preisalarm für ' + (p.strain || p.name) + ' bei ' + eur(v) + ' gespeichert', 'good');
-    });
-    actions.append(save);
-    if (existing) {
-      const del = el('button', 'fx-btn', 'Alarm löschen');
-      del.type = 'button';
-      del.addEventListener('click', async () => {
-        await setAlert(p, null);
-        closeModal();
-        toast('Preisalarm entfernt');
-      });
-      actions.append(del);
-    }
-
-    bodyEl.append(el('div', 'fx-modal-note', 'Aktueller Preis: ' + eur(p.price) + ' / g – geprüft wird alle 3 Stunden.'), row, actions);
-    const wrap = el('div', 'fx-modal-inner');
-    wrap.append(head, bodyEl);
-    openModal(wrap);
-    setTimeout(() => input.focus(), 50);
-  }
-
   /* ---------- Kategorie / Filter ---------- */
 
   function switchCategory(catId) {
@@ -1223,6 +1663,8 @@
     state.visible = PAGE_STEP;
     if (ui.input) ui.input.value = '';
     if (ui.favSection) ui.favSection.checkbox.checked = false;
+    state.filters.attrs = { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() };
+    if (ui.attrs) ui.attrs.reset();
     resetControls();
     render();
     syncURL();
@@ -1230,7 +1672,8 @@
 
   /* ---------- URL ---------- */
 
-  const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort'];
+  const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort',
+    'eff', 'taste', 'med', 'side', 'terp', 'cmp'];
 
   function syncURL() {
     if (!state.opened) return;
@@ -1248,6 +1691,11 @@
     if (f.onlyAvail) params.set('avail', '1');
     if (f.onlyFavs) params.set('fav', '1');
     if (f.sort !== 'popularity') params.set('sort', f.sort);
+    if (state.compare.size) params.set('cmp', [...state.compare].join(','));
+    for (const key of Object.keys(window.ATTR_PREFIX || {})) {
+      const set = f.attrs[key];
+      if (set && set.size) params.set(window.ATTR_PREFIX[key], [...set].join(','));
+    }
     history.replaceState(history.state, '', location.pathname + '?' + params.toString());
   }
 
@@ -1270,6 +1718,11 @@
     f.onlyAvail = params.get('avail') === '1';
     f.onlyFavs = params.get('fav') === '1';
     if (params.get('sort')) f.sort = params.get('sort');
+    if (params.get('cmp')) state.compare = new Set(params.get('cmp').split(',').map(Number).filter(Boolean));
+    for (const [key, prefix] of Object.entries(window.PREFIX_ATTR || {})) {
+      const raw = params.get(prefix);
+      if (raw) f.attrs[key] = new Set(raw.split(',').map(Number).filter((n) => !isNaN(n)));
+    }
   }
 
   function clearURL() {
@@ -1323,10 +1776,10 @@
       document.documentElement.style.overflow = 'hidden';
       ui.host.classList.add('fx-visible');
       render();
+      renderCompareTray();
       loadUserData().then(() => {
         render();
         if (!state.items.length) loadCategory(state.category, false);
-        checkAlerts();
       });
       setTimeout(() => ui.input && ui.input.focus(), 60);
     } else {
@@ -1428,7 +1881,6 @@
     loadUserData();
     loadCategory(state.category, false);
     injectDetailBadge();
-    setTimeout(checkAlerts, 6000);
 
     if (params.get('fx') === '1') {
       setTimeout(openOverlay, 250);

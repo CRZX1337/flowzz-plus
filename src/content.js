@@ -22,7 +22,6 @@
 
   const HAS_CHROME = typeof chrome !== 'undefined' && chrome && chrome.runtime && chrome.runtime.id;
   const CSS_URL = HAS_CHROME ? chrome.runtime.getURL('overlay.css') : null;
-  const CAN_NOTIFY = typeof chrome !== 'undefined' && chrome.notifications && chrome.notifications.create;
 
   /* ---------- Herkunft normalisieren ---------- */
 
@@ -131,7 +130,7 @@
     facetsBuilt: false,
     category: 'flowers',
     favorites: new Set(),
-    alerts: {},
+    compare: new Set(),
     prices: new Map(),
     pricesLoading: false,
     vendors: null,
@@ -146,7 +145,8 @@
       irr: '',
       onlyAvail: false,
       onlyFavs: false,
-      sort: 'popularity'
+      sort: 'popularity',
+      attrs: { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() }
     }
   };
 
@@ -358,21 +358,6 @@
 
   /* ---------- Favoriten & Alarme ---------- */
 
-  async function loadUserData() {
-    const favs = await store.get('fx_favs_v1');
-    if (Array.isArray(favs)) state.favorites = new Set(favs.map(Number));
-    const alerts = await store.get('fx_alerts_v1');
-    if (alerts && typeof alerts === 'object') state.alerts = alerts;
-  }
-
-  async function saveFavorites() {
-    await store.set('fx_favs_v1', [...state.favorites]);
-  }
-
-  async function saveAlerts() {
-    await store.set('fx_alerts_v1', state.alerts);
-  }
-
   function toggleFavorite(p) {
     if (state.favorites.has(p.id)) state.favorites.delete(p.id);
     else state.favorites.add(p.id);
@@ -381,52 +366,13 @@
     renderGrid();
   }
 
-  function alertFor(p) {
-    return state.alerts[String(p.id)] || null;
+  async function loadUserData() {
+    const favs = await store.get('fx_favs_v1');
+    if (Array.isArray(favs)) state.favorites = new Set(favs.map(Number));
   }
 
-  async function setAlert(p, target) {
-    if (target == null) {
-      delete state.alerts[String(p.id)];
-    } else {
-      state.alerts[String(p.id)] = {
-        id: p.id,
-        cat: p.cat,
-        slug: p.slug,
-        name: p.name,
-        target: Number(target),
-        lastPrice: p.price,
-        updatedAt: Date.now(),
-        notifiedAt: 0
-      };
-    }
-    await saveAlerts();
-    renderGrid();
-  }
-
-  async function checkAlerts() {
-    const alerts = Object.values(state.alerts);
-    if (!alerts.length) return;
-    const hits = alerts.filter((a) => a.target != null && a.lastPrice != null &&
-      a.lastPrice <= a.target && (!a.notifiedAt || Date.now() - a.notifiedAt > 24 * 60 * 60 * 1000));
-    if (!hits.length) return;
-    for (const a of hits) {
-      a.notifiedAt = Date.now();
-      if (CAN_NOTIFY) {
-        try {
-          chrome.notifications.create('fx-alert-' + a.id, {
-            type: 'basic',
-            iconUrl: HAS_CHROME ? chrome.runtime.getURL('icons/icon128.png') : '',
-            title: 'flowzz+ Preisalarm',
-            message: `${a.name}: jetzt ${eur(a.lastPrice)} / g (Ziel ${eur(a.target)})`,
-            priority: 1
-          });
-        } catch (e) { /* ignore */ }
-      } else {
-        toast(`${a.name}: ${eur(a.lastPrice)} / g erreicht`, 'good');
-      }
-    }
-    await saveAlerts();
+  async function saveFavorites() {
+    await store.set('fx_favs_v1', [...state.favorites]);
   }
 
   /* ---------- Filterlogik ---------- */
@@ -446,7 +392,41 @@
     if (f.irr === 'no' && p.irr) return false;
     if (f.irr === 'yes' && !p.irr) return false;
     if (f.onlyAvail && !p.avail) return false;
+    if (window.fxMatchesAttrs && !window.fxMatchesAttrs(state.attrOf(p.id), f.attrs)) return false;
     return true;
+  }
+
+  /** Attribute eines Produkts aus dem Index (oder null). */
+  function attrOf(id) {
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    if (!idx) return null;
+    return idx.products[String(id)] || null;
+  }
+
+  state.attrOf = attrOf;
+
+  /** Trefferzahl für ein Attribut, alle anderen Filter angewendet. */
+  function attrCount(key, id) {
+    const f = state.filters;
+    let n = 0;
+    for (const p of state.items) {
+      if (!matches(p, f)) continue;
+      const a = attrOf(p.id);
+      if (a && a[key] && a[key].includes(id)) n++;
+    }
+    return n;
+  }
+
+  function toggleAttr(key, id, on) {
+    const set = state.filters.attrs[key];
+    if (on) set.add(id); else set.delete(id);
+    state.visible = PAGE_STEP;
+    render();
+    syncURL();
+  }
+
+  function selectedAttrs(key) {
+    return state.filters.attrs[key];
   }
 
   function sorted(list) {
@@ -570,6 +550,7 @@
     ui.availSection = buildAvailSection();
     ui.favSection = buildFavSection();
 
+    ui.attrHost = el('div', 'fx-attr-host');
     ui.dataNote = el('div', 'fx-datanote', '');
     side.append(
       sideHead,
@@ -581,6 +562,7 @@
       ui.irrSection.node,
       ui.availSection.node,
       ui.favSection.node,
+      ui.attrHost,
       ui.dataNote
     );
 
@@ -635,7 +617,13 @@
     ui.progressBar = ui.progress.querySelector('i');
     ui.progressText = ui.progress.querySelector('span');
 
-    main.append(toolbar, ui.progress, ui.grid, ui.empty, moreWrap);
+    ui.chips = el('div', 'fx-chips');
+    ui.chips.hidden = true;
+    main.append(toolbar, ui.chips, ui.progress, ui.grid, ui.empty, moreWrap);
+
+    ui.tray = el('div', 'fx-tray');
+    ui.tray.hidden = true;
+    app.append(ui.tray);
     body.append(side, main);
     app.append(top, tabs, body);
     shadow.appendChild(app);
@@ -643,6 +631,16 @@
     ui.app = app;
     ui.input = input;
     ui.side = side;
+
+    if (window.fxAttrs) {
+      ui.attrs = window.fxAttrs.mount(ui.attrHost, {
+        getSelected: selectedAttrs,
+        toggle: toggleAttr,
+        countFor: attrCount,
+        onChange: render,
+        notify: toast
+      });
+    }
 
     ui.modal = el('div', 'fx-modal');
     ui.modal.hidden = true;
@@ -827,6 +825,129 @@
     return { node: s.node, checkbox: cb, text };
   }
 
+  /* ---------- Vergleich ---------- */
+
+  function toggleCompare(p) {
+    if (state.compare.has(p.id)) {
+      state.compare.delete(p.id);
+    } else {
+      if (state.compare.size >= 4) { toast('Maximal 4 Produkte vergleichen'); return; }
+      state.compare.add(p.id);
+    }
+    renderCompareTray();
+    renderGrid();
+    syncURL();
+  }
+
+  function compareProducts() {
+    return [...state.compare].map((id) => state.items.find((p) => p.id === id)).filter(Boolean);
+  }
+
+  function renderCompareTray() {
+    if (!ui.tray) return;
+    const items = compareProducts();
+    ui.tray.hidden = items.length === 0;
+    ui.tray.textContent = '';
+    if (!items.length) return;
+
+    const label = el('span', 'fx-tray-label', items.length + '/4');
+    const chips = el('div', 'fx-tray-chips');
+    for (const p of items) {
+      const chip = el('span', 'fx-tray-chip');
+      chip.append(el('span', null, p.strain || p.name));
+      const x = el('button', 'fx-tray-x', '×');
+      x.type = 'button';
+      x.addEventListener('click', () => toggleCompare(p));
+      chip.append(x);
+      chips.append(chip);
+    }
+    const clear = el('button', 'fx-btn fx-tray-clear', 'Leeren');
+    clear.type = 'button';
+    clear.addEventListener('click', () => {
+      state.compare.clear();
+      renderCompareTray();
+      renderGrid();
+      syncURL();
+    });
+    const go = el('button', 'fx-btn fx-btn-primary', 'Vergleichen');
+    go.type = 'button';
+    go.disabled = items.length < 2;
+    go.addEventListener('click', openCompareDialog);
+
+    ui.tray.append(label, chips, clear, go);
+  }
+
+  function openCompareDialog() {
+    const items = compareProducts();
+    if (items.length < 2) { toast('Mindestens 2 Produkte auswählen'); return; }
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    const labelOf = (key, id) => (window.fxLabelOf ? window.fxLabelOf(idx, key, id) : String(id));
+
+    const head = el('div', 'fx-modal-head');
+    head.append(el('b', null, 'Vergleich'), el('span', null, items.length + ' Produkte'));
+    const close = el('button', 'fx-modal-close', '✕');
+    close.type = 'button';
+    close.addEventListener('click', closeModal);
+    head.append(close);
+
+    const body = el('div', 'fx-modal-body');
+    const table = el('table', 'fx-compare');
+    const thead = el('thead');
+    const hr = el('tr');
+    hr.append(el('th', 'fx-cmp-key', ''));
+    for (const p of items) {
+      const th = el('th');
+      const link = el('a', 'fx-cmp-title', p.strain || p.name);
+      link.href = '/product/' + p.slug;
+      th.append(link, el('div', 'fx-cmp-sub', p.producer || ''));
+      hr.append(th);
+    }
+    thead.append(hr);
+
+    const rows = [
+      ['Preis / g', (p) => (p.price == null ? '—' : eur(p.price)), 'min'],
+      ['THC', (p) => pct(p.thc), 'max'],
+      ['CBD', (p) => pct(p.cbd)],
+      ['Genetik', (p) => p.genetic || '—'],
+      ['Herkunft', (p) => (p.origin === 'Unbekannt' ? '—' : p.origin)],
+      ['Bestrahlung', (p) => (p.irr ? 'bestrahlt' : 'unbestrahlt')],
+      ['Verfügbar', (p) => (p.avail ? 'ja' : 'nein')],
+      ['Bewertung', (p) => (p.rating ? '★ ' + p.rating.toFixed(1) : '—'), 'max'],
+      ['Effekte', (p) => {
+        const a = idx && idx.products[String(p.id)];
+        return a && a.e ? a.e.slice(0, 4).map((id) => labelOf('e', id)).join(', ') : '—';
+      }],
+      ['Terpene', (p) => {
+        const a = idx && idx.products[String(p.id)];
+        return a && a.tp ? a.tp.slice(0, 4).map((id) => labelOf('tp', id)).join(', ') : '—';
+      }]
+    ];
+
+    const tbody = el('tbody');
+    for (const [label, fn, best] of rows) {
+      const tr = el('tr');
+      tr.append(el('td', 'fx-cmp-key', label));
+      const values = items.map(fn);
+      let bestIdx = -1;
+      if (best) {
+        const nums = items.map((p) => (best === 'min' ? (p.price == null ? Infinity : p.price) : (p.thc == null ? -1 : p.thc)));
+        const target = best === 'min' ? Math.min(...nums) : Math.max(...nums);
+        if (isFinite(target) && target !== (best === 'min' ? Infinity : -1)) bestIdx = nums.indexOf(target);
+      }
+      values.forEach((v, i) => {
+        const td = el('td', i === bestIdx ? 'fx-cmp-best' : '', v);
+        tr.append(td);
+      });
+      tbody.append(tr);
+    }
+    table.append(thead, tbody);
+    body.append(table);
+
+    const wrap = el('div', 'fx-modal-inner fx-modal-wide');
+    wrap.append(head, body);
+    openModal(wrap);
+  }
+
   /* ---------- Rendering ---------- */
 
   function render() {
@@ -895,6 +1016,7 @@
   function renderFacets() {
     const f = state.filters;
     if (!state.facetsBuilt && state.items.length) buildFacetLists();
+    if (ui.attrs) ui.attrs.refresh();
 
     const originCounts = facetCounts('origin');
     const originQuery = (ui.originSearch && ui.originSearch.value.trim().toLowerCase()) || '';
@@ -955,11 +1077,11 @@
     fav.type = 'button';
     fav.title = state.favorites.has(p.id) ? 'Favorit entfernen' : 'Zu Favoriten';
     fav.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(p); });
-    const bell = el('button', 'fx-actbtn' + (alertFor(p) ? ' is-on' : ''), '🔔');
-    bell.type = 'button';
-    bell.title = alertFor(p) ? 'Preisalarm bearbeiten' : 'Preisalarm setzen';
-    bell.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openAlertDialog(p); });
-    actions.append(fav, bell);
+    const cmp = el('button', 'fx-actbtn' + (state.compare.has(p.id) ? ' is-on' : ''), '⇄');
+    cmp.type = 'button';
+    cmp.title = state.compare.has(p.id) ? 'Aus Vergleich entfernen' : 'Zum Vergleich';
+    cmp.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(p); });
+    actions.append(fav, cmp);
     thumb.append(actions);
 
     const body = el('div', 'fx-cardbody');
@@ -995,7 +1117,27 @@
     return a;
   }
 
+  function renderAttrChips() {
+    if (!ui.chips) return;
+    const idx = window.fxAttrs && window.fxAttrs.index;
+    ui.chips.textContent = '';
+    if (!idx) return;
+    let any = false;
+    for (const key of Object.keys(state.filters.attrs)) {
+      for (const id of state.filters.attrs[key]) {
+        any = true;
+        const label = window.fxLabelOf ? window.fxLabelOf(idx, key, id) : String(id);
+        const chip = el('button', 'fx-chip', label + '  ×');
+        chip.type = 'button';
+        chip.addEventListener('click', () => toggleAttr(key, id, false));
+        ui.chips.append(chip);
+      }
+    }
+    ui.chips.hidden = !any;
+  }
+
   function renderGrid() {
+    renderAttrChips();
     const list = currentList();
     const grid = ui.grid;
     grid.textContent = '';
@@ -1114,55 +1256,6 @@
     bodyEl.append(el('div', 'fx-modal-note', 'Preise pro Gramm, Stand der Website. Alle Apotheken auf der Produktseite.'));
   }
 
-  function openAlertDialog(p) {
-    const existing = alertFor(p);
-    const head = el('div', 'fx-modal-head');
-    head.append(el('b', null, 'Preisalarm'), el('span', null, p.strain || p.name));
-    const close = el('button', 'fx-modal-close', '✕');
-    close.type = 'button';
-    close.addEventListener('click', closeModal);
-    head.append(close);
-
-    const bodyEl = el('div', 'fx-modal-body');
-    bodyEl.append(el('div', 'fx-modal-note', 'Aktueller Preis: ' + eur(p.price) + ' / g. Die Erweiterung prüft den Preis alle 3 Stunden und meldet sich, sobald dein Ziel erreicht ist.'));
-    const row = el('div', 'fx-numberrow');
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.step = '0.1';
-    input.min = '0';
-    input.placeholder = 'Ziel €/g';
-    input.value = existing ? String(existing.target) : (p.price != null ? String(Math.max(0.5, Math.floor(p.price * 0.9 * 10) / 10)) : '');
-    row.append(input);
-
-    const actions = el('div', 'fx-modal-actions');
-    const save = el('button', 'fx-btn fx-btn-primary', existing ? 'Alarm aktualisieren' : 'Alarm setzen');
-    save.type = 'button';
-    save.addEventListener('click', async () => {
-      const v = Number(String(input.value).replace(',', '.'));
-      if (!v || v <= 0) { toast('Bitte einen Zielpreis eingeben'); return; }
-      await setAlert(p, v);
-      closeModal();
-      toast('Preisalarm für ' + (p.strain || p.name) + ' bei ' + eur(v) + ' gespeichert', 'good');
-    });
-    actions.append(save);
-    if (existing) {
-      const del = el('button', 'fx-btn', 'Alarm löschen');
-      del.type = 'button';
-      del.addEventListener('click', async () => {
-        await setAlert(p, null);
-        closeModal();
-        toast('Preisalarm entfernt');
-      });
-      actions.append(del);
-    }
-
-    bodyEl.append(el('div', 'fx-modal-note', 'Aktueller Preis: ' + eur(p.price) + ' / g – geprüft wird alle 3 Stunden.'), row, actions);
-    const wrap = el('div', 'fx-modal-inner');
-    wrap.append(head, bodyEl);
-    openModal(wrap);
-    setTimeout(() => input.focus(), 50);
-  }
-
   /* ---------- Kategorie / Filter ---------- */
 
   function switchCategory(catId) {
@@ -1205,6 +1298,8 @@
     state.visible = PAGE_STEP;
     if (ui.input) ui.input.value = '';
     if (ui.favSection) ui.favSection.checkbox.checked = false;
+    state.filters.attrs = { e: new Set(), t: new Set(), m: new Set(), s: new Set(), tp: new Set() };
+    if (ui.attrs) ui.attrs.reset();
     resetControls();
     render();
     syncURL();
@@ -1212,7 +1307,8 @@
 
   /* ---------- URL ---------- */
 
-  const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort'];
+  const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort',
+    'eff', 'taste', 'med', 'side', 'terp', 'cmp'];
 
   function syncURL() {
     if (!state.opened) return;
@@ -1230,6 +1326,11 @@
     if (f.onlyAvail) params.set('avail', '1');
     if (f.onlyFavs) params.set('fav', '1');
     if (f.sort !== 'popularity') params.set('sort', f.sort);
+    if (state.compare.size) params.set('cmp', [...state.compare].join(','));
+    for (const key of Object.keys(window.ATTR_PREFIX || {})) {
+      const set = f.attrs[key];
+      if (set && set.size) params.set(window.ATTR_PREFIX[key], [...set].join(','));
+    }
     history.replaceState(history.state, '', location.pathname + '?' + params.toString());
   }
 
@@ -1252,6 +1353,11 @@
     f.onlyAvail = params.get('avail') === '1';
     f.onlyFavs = params.get('fav') === '1';
     if (params.get('sort')) f.sort = params.get('sort');
+    if (params.get('cmp')) state.compare = new Set(params.get('cmp').split(',').map(Number).filter(Boolean));
+    for (const [key, prefix] of Object.entries(window.PREFIX_ATTR || {})) {
+      const raw = params.get(prefix);
+      if (raw) f.attrs[key] = new Set(raw.split(',').map(Number).filter((n) => !isNaN(n)));
+    }
   }
 
   function clearURL() {
@@ -1305,10 +1411,10 @@
       document.documentElement.style.overflow = 'hidden';
       ui.host.classList.add('fx-visible');
       render();
+      renderCompareTray();
       loadUserData().then(() => {
         render();
         if (!state.items.length) loadCategory(state.category, false);
-        checkAlerts();
       });
       setTimeout(() => ui.input && ui.input.focus(), 60);
     } else {
@@ -1410,7 +1516,6 @@
     loadUserData();
     loadCategory(state.category, false);
     injectDetailBadge();
-    setTimeout(checkAlerts, 6000);
 
     if (params.get('fx') === '1') {
       setTimeout(openOverlay, 250);

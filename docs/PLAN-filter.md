@@ -8,12 +8,26 @@ teilbaren URLs.
 
 ---
 
+## 0. Phase-0-Ergebnis (12.11.2026)
+
+- **Kein HTML-Crawl nötig:** `/api/v1/views/<kategorie>/<slug>` liefert das komplette
+  Produkt inklusive `strain.strain_attributes` und `terpenes` als JSON.
+- **Abdeckung (Stichprobe 40):** Effekte, Geschmack, medizinische Wirkung und Terpene
+  je 100 %, Nebenwirkungen 27,5 %.
+- **Tempo:** 1 Request/s ist stabil; 4 req/s und mehr löst 429 aus (Limit gilt pro Zeitfenster,
+  nicht pro Sekunde). Der Crawler drosselt adaptiv und merkt sich den Fortschritt.
+- **HTML-Seiten** (`/product/...`) sind nach zu vielen Requests minutenlang gesperrt, die
+  JSON-API nicht – deshalb ausschließlich API.
+- **Labels:** 67 Strain-Attribute und 49 Terpene; beide Namensräume kollidieren bei den IDs,
+  deshalb getrennte Maps `labels` / `terpLabels`.
+- **Laufzeit:** 2.889 Produkte ≈ 45–50 min bei 1 req/s.
+
 ## 1. Datenlage (verifiziert am 12.11.2026)
 
 | Frage | Befund |
 |---|---|
 | Produktlisten | `/api/v1/views/flowers|extracts|edibles`, `pageSize` max. 240, Blüten 2.717 |
-| Attribute pro Produkt | **nicht** in der Listen-API; nur auf der Produktseite in `#__NEXT_DATA__` (`pageContext.product.attributes.strain.data.attributes.strain_attributes` + `terpenes`) |
+| Attribute pro Produkt | **nicht** in der Listen-API, aber in der Detail-API `/api/v1/views/<cat>/<slug>` (`data.attributes.strain.data.attributes.strain_attributes` + `data.attributes.terpenes`) |
 | Filterparameter der Website | `attref` (Effekt), `attrmed`, `attrta` (Geschmack), `terp`, `vend`, `lat`, `lon`, `radius`, `pickup/express/delivery/shipment`, `thc/cbd/pri/typ/prod/str/avail` |
 | Verhalten der API | Parameter werden **ignoriert** (direkt und per SSR getestet: `total` bleibt 2.717, erste IDs unverändert) – auch `thc=25-` filtert die Liste nicht |
 | Apothekenpreise | `/api/v1/views/vendors/prices/<2|3|4>/<ids>`; **max. ~3 Produkte pro Request**, schnelle Folgen → HTTP 429 |
@@ -125,6 +139,16 @@ Ziel: „Zeig mir Blüten, die eine Apotheke im Umkreis von 20 km um 10115 Berli
 | Index veraltet | falsche Filtertreffer | `version` + täglicher Refresh, Hinweis im Footer |
 | PLZ-Geocoding fehlt | Umkreisfilter tot | Fallback OSM/Nominatim, Cache |
 | Datenmenge | lange Ladezeit | gzip, ID-Maps statt Objekte, nur aktive Kategorie laden |
+
+## 5. Umsetzungsstand (12.11.2026)
+
+- [x] Attribut-Index (Effekte, Geschmack, medizinische Wirkung, Nebenwirkungen, Terpene)
+- [x] Filter-Sektionen mit Trefferzahlen, URL-Parameter, Chips
+- [x] Vergleichsmodus (bis 4 Produkte, Diff-Hervorhebung)
+- [ ] Apotheken-Umkreis (Phase 3, offen)
+- [ ] QA-Release 1.3.0
+
+**Entscheidung:** Ein Preisverlauf/Telegram-Alarm wird nicht umgesetzt (zu viel Datenhaltung).
 
 ## 5. Offene Fragen
 

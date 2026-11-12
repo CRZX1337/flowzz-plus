@@ -1,0 +1,15 @@
+{
+  "version": "2026-11-12",
+  "catalog": 2889,
+  "with_attributes": 2861,
+  "coverage_percent": {
+    "e": 98.0,
+    "t": 97.8,
+    "m": 97.9,
+    "s": 33.1,
+    "tp": 92.7
+  },
+  "labels": 68,
+  "gzip_kb": 176.0,
+  "raw_kb": 1040.5
+}

@@ -1,0 +1,324 @@
+{
+ "version": "2026-11-12",
+ "strain": {
+  "1": {
+   "label": "Kreativ",
+   "type": "effect"
+  },
+  "2": {
+   "label": "Energetisch",
+   "type": "effect"
+  },
+  "3": {
+   "label": "Erregt",
+   "type": "effect"
+  },
+  "4": {
+   "label": "Fokussiert",
+   "type": "effect"
+  },
+  "5": {
+   "label": "Euphorisch",
+   "type": "effect"
+  },
+  "6": {
+   "label": "Glücklich",
+   "type": "effect"
+  },
+  "7": {
+   "label": "Gesellig",
+   "type": "effect"
+  },
+  "8": {
+   "label": "Schläfrig",
+   "type": "effect"
+  },
+  "9": {
+   "label": "Albern",
+   "type": "effect"
+  },
+  "10": {
+   "label": "Relaxed",
+   "type": "effect"
+  },
+  "11": {
+   "label": "Hungrig",
+   "type": "effect"
+  },
+  "12": {
+   "label": "Krebs Begleiterscheinungen",
+   "type": "medicalUsage"
+  },
+  "13": {
+   "label": "Chronische Schmerzen",
+   "type": "medicalUsage"
+  },
+  "15": {
+   "label": "Migräne",
+   "type": "medicalUsage"
+  },
+  "16": {
+   "label": "Schlafstörungen",
+   "type": "medicalUsage"
+  },
+  "17": {
+   "label": "Appetitlosigkeit",
+   "type": "medicalUsage"
+  },
+  "18": {
+   "label": "Stress",
+   "type": "medicalUsage"
+  },
+  "19": {
+   "label": "Depression",
+   "type": "medicalUsage"
+  },
+  "20": {
+   "label": "Übelkeit",
+   "type": "medicalUsage"
+  },
+  "21": {
+   "label": "Angstzustände",
+   "type": "medicalUsage"
+  },
+  "22": {
+   "label": "Süß",
+   "type": "taste"
+  },
+  "23": {
+   "label": "Blumen",
+   "type": "taste"
+  },
+  "24": {
+   "label": "Tropical",
+   "type": "taste"
+  },
+  "25": {
+   "label": "Fruchtig",
+   "type": "taste"
+  },
+  "26": {
+   "label": "Kaffee",
+   "type": "taste"
+  },
+  "27": {
+   "label": "Kräuter",
+   "type": "taste"
+  },
+  "28": {
+   "label": "Holzig",
+   "type": "taste"
+  },
+  "29": {
+   "label": "Salbei",
+   "type": "taste"
+  },
+  "30": {
+   "label": "Minze",
+   "type": "taste"
+  },
+  "31": {
+   "label": "Citrus",
+   "type": "taste"
+  },
+  "32": {
+   "label": "Würzig",
+   "type": "taste"
+  },
+  "33": {
+   "label": "Kiefer",
+   "type": "taste"
+  },
+  "34": {
+   "label": "Teer",
+   "type": "taste"
+  },
+  "35": {
+   "label": "Käse",
+   "type": "taste"
+  },
+  "36": {
+   "label": "Diesel",
+   "type": "taste"
+  },
+  "37": {
+   "label": "Vanille",
+   "type": "taste"
+  },
+  "38": {
+   "label": "Tabak",
+   "type": "taste"
+  },
+  "39": {
+   "label": "Erdig",
+   "type": "taste"
+  },
+  "40": {
+   "label": "Trockene Augen",
+   "type": "sideEffects"
+  },
+  "41": {
+   "label": "Trockener Mund",
+   "type": "sideEffects"
+  },
+  "42": {
+   "label": "Angst",
+   "type": "sideEffects"
+  },
+  "43": {
+   "label": "Kopfschmerzen",
+   "type": "medicalUsage"
+  },
+  "44": {
+   "label": "Paranoid",
+   "type": "sideEffects"
+  },
+  "45": {
+   "label": "Schwindel",
+   "type": "sideEffects"
+  },
+  "46": {
+   "label": "ADHS",
+   "type": "medicalUsage"
+  },
+  "47": {
+   "label": "Alzheimer",
+   "type": "medicalUsage"
+  },
+  "48": {
+   "label": "Asthma",
+   "type": "medicalUsage"
+  },
+  "49": {
+   "label": "Arthritis",
+   "type": "medicalUsage"
+  },
+  "50": {
+   "label": "Entzündungen",
+   "type": "medicalUsage"
+  },
+  "51": {
+   "label": "Epilepsie",
+   "type": "medicalUsage"
+  },
+  "52": {
+   "label": "Erschöpfung",
+   "type": "medicalUsage"
+  },
+  "53": {
+   "label": "Fibromyalgie",
+   "type": "medicalUsage"
+  },
+  "54": {
+   "label": "Gastroinestinalstörung",
+   "type": "medicalUsage"
+  },
+  "55": {
+   "label": "HIV/AIDS",
+   "type": "medicalUsage"
+  },
+  "56": {
+   "label": "Krämpfe",
+   "type": "medicalUsage"
+  },
+  "57": {
+   "label": "Magersucht",
+   "type": "medicalUsage"
+  },
+  "58": {
+   "label": "Morbus Chron",
+   "type": "medicalUsage"
+  },
+  "59": {
+   "label": "Multiple Sklerose",
+   "type": "medicalUsage"
+  },
+  "60": {
+   "label": "Muskeldystrophie",
+   "type": "medicalUsage"
+  },
+  "61": {
+   "label": "Parkinson",
+   "type": "medicalUsage"
+  },
+  "62": {
+   "label": "Prämenstruelles Syndrom",
+   "type": "medicalUsage"
+  },
+  "63": {
+   "label": "PTBS Symptome",
+   "type": "medicalUsage"
+  },
+  "64": {
+   "label": "Spastik",
+   "type": "medicalUsage"
+  },
+  "65": {
+   "label": "Tinitus",
+   "type": "medicalUsage"
+  },
+  "66": {
+   "label": "Tourette-Syndrom",
+   "type": "medicalUsage"
+  },
+  "67": {
+   "label": "Phantomschmerzen",
+   "type": "medicalUsage"
+  },
+  "69": {
+   "label": "Endometriose",
+   "type": "medicalUsage"
+  }
+ },
+ "terp": {
+  "1": "Terpinolen",
+  "2": "Beta-Myrcen",
+  "3": "Limonen",
+  "4": "Alpha-Pinen",
+  "5": "D-Limonen",
+  "6": "Beta-Pinen",
+  "7": "Beta-Caryophyllen",
+  "8": "Alpha-Bisabolol",
+  "9": "Alpha-Caryophyllene",
+  "10": "Alpha-Humulen",
+  "11": "Linalool",
+  "12": "Humulen",
+  "13": "Ocimen",
+  "14": "Guaiol",
+  "15": "Beta-Ocimem",
+  "16": "Alpha-Terpineol",
+  "17": "Myrcen",
+  "18": "Pinene",
+  "19": "Camphen",
+  "20": "Nerolidol",
+  "21": "Caryophyllenoxid",
+  "22": "Cis-Ocimen",
+  "23": "Gamma-Elemen",
+  "24": "Beta-2-Pinen",
+  "25": "Alpha-2-Pinen",
+  "26": "Alpha-Guaien",
+  "27": "Gamma-Selinen",
+  "28": "Gamma-Cadinen",
+  "29": "Trans-Bergamoten",
+  "30": "Trans-β-Farnesen",
+  "31": "p-Cymen",
+  "32": "Fenchol",
+  "33": "Alpha-Cedren",
+  "34": "Trans-Caryophyllen",
+  "35": "Alpha-Selinen",
+  "36": "trans-Nerolidol",
+  "37": "Bisabolol",
+  "38": "Farnesen",
+  "39": "Geraniol",
+  "40": "Geranylacetat",
+  "41": "Germacrene",
+  "42": "Selinadiene",
+  "43": "Valencene",
+  "44": "Phellandrene",
+  "45": "Eucalyptol",
+  "46": "Borneol",
+  "47": "Delta-3-Caren",
+  "48": "Farsenen",
+  "49": "Sonstige"
+ }
+}

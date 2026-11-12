@@ -2,12 +2,10 @@
   "manifest_version": 3,
   "name": "flowzz+ · Herkunft & Suche",
   "version": "1.1.0",
-  "description": "Erweiterte Suche für flowzz.com: Herkunft, Apothekenpreise, Favoriten, Preisalarm und CSV-Export.",
+  "description": "Erweiterte Suche für flowzz.com: Herkunft, Effekte, Terpene, Favoriten, Vergleich und CSV-Export.",
   "permissions": [
     "storage",
-    "activeTab",
-    "alarms",
-    "notifications"
+    "activeTab"
   ],
   "host_permissions": [
     "https://flowzz.com/*"

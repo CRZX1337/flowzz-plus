@@ -1,0 +1,44 @@
+name: Attribut-Index aktualisieren
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # täglich 03:17 UTC
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: 'Alles neu crawlen (statt Delta)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Index bauen
+        env:
+          FX_PARTIAL: ''
+        run: |
+          python3 tools/crawl-attributes.py --workers 4 --rps 1.5 ${{ inputs.fresh && '--fresh' || '' }}
+
+      - name: Änderungen committen
+        run: |
+          git config user.name 'flowzz-bot'
+          git config user.email 'flowzz-bot@users.noreply.github.com'
+          git add data/attrs.json.gz data/attrs.meta.json data/attrs-progress.json data/labelmap.json
+          if git diff --cached --quiet; then
+            echo 'keine Änderungen'
+            exit 0
+          fi
+          META=$(python3 -c "import json;d=json.load(open('data/attrs.meta.json'));print(f\"{d['with_attributes']}/{d['catalog']} Produkte, gzip {d['gzip_kb']} KB\")")
+          git commit -m "data: Attribut-Index aktualisiert ($META)"
+          git push

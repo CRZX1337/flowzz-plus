@@ -22,6 +22,8 @@ const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
 const version = pkg.version;
 
 const read = (file) => fs.readFileSync(path.join(SRC, file), 'utf8');
+const attrs = read('attrs.js');
+const attrsUi = read('attrs-ui.js');
 const content = read('content.js').replaceAll('__FX_VERSION__', version);
 const css = read('overlay.css');
 const background = read('background.js');
@@ -33,6 +35,15 @@ manifestFirefox.browser_specific_settings.gecko.update_url = `${BASE}/updates.js
 
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.rmSync(BUILD, { recursive: true, force: true });
+fs.mkdirSync(DIST, { recursive: true });
+// Crawler-Daten (data/) bleiben erhalten und wandern mit ins Release
+const DATA = path.join(ROOT, 'data');
+if (fs.existsSync(path.join(DATA, 'attrs.json.gz'))) {
+  fs.copyFileSync(path.join(DATA, 'attrs.json.gz'), path.join(DIST, 'attrs.json.gz'));
+  if (fs.existsSync(path.join(DATA, 'attrs.meta.json'))) {
+    fs.copyFileSync(path.join(DATA, 'attrs.meta.json'), path.join(DIST, 'attrs.meta.json'));
+  }
+}
 fs.mkdirSync(DIST, { recursive: true });
 
 /* ---------- Userscript ---------- */
@@ -57,7 +68,7 @@ const header = `// ==UserScript==
 
 `;
 
-const userscript = header + content;
+const userscript = header + attrs + '\n' + attrsUi + '\n' + content;
 fs.writeFileSync(path.join(DIST, 'flowzz-plus.user.js'), userscript);
 
 /* ---------- Erweiterungen ---------- */
@@ -66,7 +77,13 @@ function stage(name, manifest) {
   const dir = path.join(BUILD, name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  fs.writeFileSync(path.join(dir, 'attrs.js'), attrs);
+  fs.writeFileSync(path.join(dir, 'attrs-ui.js'), attrsUi);
   fs.writeFileSync(path.join(dir, 'content.js'), content);
+  const mf = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+  const cs = mf.content_scripts[0];
+  cs.js = ['attrs.js', 'attrs-ui.js', 'content.js'];
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(mf, null, 2) + '\n');
   fs.copyFileSync(path.join(SRC, 'overlay.css'), path.join(dir, 'overlay.css'));
   fs.copyFileSync(path.join(SRC, 'background.js'), path.join(dir, 'background.js'));
   fs.cpSync(path.join(ROOT, 'icons'), path.join(dir, 'icons'), { recursive: true });
