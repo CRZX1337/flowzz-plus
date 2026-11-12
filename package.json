@@ -1,12 +1,13 @@
 {
   "name": "flowzz-plus",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "private": true,
   "description": "Herkunft, Preise, Favoriten und Vergleich für flowzz.com – Userscript & Browser-Erweiterung",
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
-    "check": "node --check src/content.js && node --check src/background.js"
+    "check": "node --check src/content.js && node --check src/background.js",
+    "contrast": "node tools/check-contrast.mjs"
   },
   "author": "CRZX1337",
   "license": "MIT"

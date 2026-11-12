@@ -5,6 +5,7 @@ Herkunftsfilter, Volltextsuche, Apotheken-Preisvergleich, Favoriten und CSV-Expo
 für **Blüten, Extrakte und Edibles**.
 
 ![Screenshot](docs/screenshot.png)
+![Darkmode](docs/dark.png)
 
 ## Installation (Tampermonkey, empfohlen)
 
@@ -40,6 +41,7 @@ auswählen. Läuft bis zum Neustart; dauerhaft erst nach Signatur (AMO unlisted)
 - **Apotheken-Preisvergleich** pro Produkt mit Preis, PLZ/Ort, Verfügbarkeit
 - **Favoriten** – Stern auf der Karte, Filter „Nur Favoriten“, lokal gespeichert
 - **CSV-Export** der aktuellen Auswahl
+- **Darkmode** – Auto/Hell/Dunkel, für das Overlay **und** die flowzz-Seite; Wahl wird gespeichert
 - **Vergleichsmodus** für 2–4 Produkte: Preise, THC/CBD, Herkunft, Bestrahlung, Bewertung,
   subjektive Wirkung und Terpene nebeneinander, beste Werte hervorgehoben
 - **Teilbare Links**, z. B. `?fx=1&origin=Kanada&thc=25-&price=6&cat=flowers`
@@ -82,6 +84,27 @@ und committet die Änderungen. Die Extension lädt ihn über
 
 `storage` (Cache, Favoriten, Attribut-Index) und `activeTab` (Toolbar-Klick),
 Host nur `https://flowzz.com/*`.
+
+## Darkmode
+
+Der Umschalter sitzt oben rechts (Sonne/Mond) und als Segment „Darstellung“ in der Sidebar:
+**Auto** folgt dem System, **Hell** und **Dunkel** sind fest. Die Wahl liegt lokal in
+`fx_theme` und gilt für Overlay und Website.
+
+- **Overlay:** eigene dunkle Palette über CSS-Variablen (kein Filter), Karten, Sidebar,
+  Modals und Chips sind durchgezogen.
+- **Website:** `filter: invert(1) hue-rotate(180deg)` auf `html`, Medien und das Overlay
+  werden gegen-invertiert. Dadurch bleiben Produktbilder original, Grün-Akzente grün und
+  die Kontrastverhältnisse der Seite rechnerisch erhalten (Invertierung erhält die relative
+  Luminanz).
+
+Kontraste prüfen:
+
+```bash
+npm run contrast   # WCAG-AA-Check aller Paare, Exitcode 1 bei Verstoß
+```
+
+Aktuell bestehen alle geprüften Paare 4,5:1 (hell min. 4,90:1, dunkel min. 5,86:1).
 
 ## Rechtlicher Hinweis
 

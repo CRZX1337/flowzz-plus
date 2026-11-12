@@ -136,6 +136,7 @@
     opened: false,
     facetsBuilt: false,
     category: 'flowers',
+    theme: 'auto',
     favorites: new Set(),
     compare: new Set(),
     prices: new Map(),
@@ -520,12 +521,17 @@
     const kbd = el('kbd', null, '/');
     searchWrap.append(input, kbd);
 
+    ui.themeBtn = el('button', 'fx-iconbtn fx-themebtn', '☾');
+    ui.themeBtn.type = 'button';
+    ui.themeBtn.title = 'Dunkelmodus';
+    ui.themeBtn.addEventListener('click', toggleTheme);
+
     const close = el('button', 'fx-close');
     close.type = 'button';
     close.innerHTML = '<span>Schließen</span><kbd>Esc</kbd>';
     close.addEventListener('click', closeOverlay);
 
-    top.append(brand, searchWrap, close);
+    top.append(brand, searchWrap, ui.themeBtn, close);
 
     const tabs = el('nav', 'fx-tabs');
     ui.tabs = new Map();
@@ -561,6 +567,7 @@
     ui.irrSection = buildIrrSection();
     ui.availSection = buildAvailSection();
     ui.favSection = buildFavSection();
+    ui.themeSection = buildThemeSection();
 
     ui.attrHost = el('div', 'fx-attr-host');
     ui.dataNote = el('div', 'fx-datanote', '');
@@ -577,6 +584,7 @@
       ui.irrSection.node,
       ui.availSection.node,
       ui.favSection.node,
+      ui.themeSection.node,
       ui.attrHost,
       ui.updateCheck,
       ui.dataNote
@@ -822,6 +830,24 @@
     label.append(cb, el('span', 'fx-knob'), el('span', null, 'Nur lieferbar'));
     s.body.append(label);
     return { node: s.node, checkbox: cb };
+  }
+
+  function buildThemeSection() {
+    const s = section('Darstellung');
+    const seg = el('div', 'fx-seg');
+    [['auto', 'Auto'], ['light', 'Hell'], ['dark', 'Dunkel']].forEach(([val, label]) => {
+      const b = el('button', 'fx-segbtn', label);
+      b.type = 'button';
+      b.dataset.value = val;
+      b.addEventListener('click', () => {
+        setTheme(val);
+        seg.querySelectorAll('.fx-segbtn').forEach((x) => x.classList.toggle('is-active', x.dataset.value === val));
+      });
+      seg.append(b);
+    });
+    s.body.append(seg);
+    ui.themeSeg = seg;
+    return { node: s.node };
   }
 
   function buildFavSection() {
@@ -1327,6 +1353,62 @@
     syncURL();
   }
 
+  /* ---------- Theme ---------- */
+
+  const SITE_DARK_CSS = `
+    html.fx-site-dark { filter: invert(1) hue-rotate(180deg); background: #000; color-scheme: dark; }
+    html.fx-site-dark img,
+    html.fx-site-dark video,
+    html.fx-site-dark picture,
+    html.fx-site-dark canvas,
+    html.fx-site-dark svg,
+    html.fx-site-dark #fx-host { filter: invert(1) hue-rotate(180deg); }
+  `;
+
+  function prefersDark() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function resolveTheme() {
+    if (state.theme === 'dark') return 'dark';
+    if (state.theme === 'light') return 'light';
+    return prefersDark() ? 'dark' : 'light';
+  }
+
+  function ensureSiteStyle() {
+    if (document.getElementById('fx-site-dark-css')) return;
+    const style = document.createElement('style');
+    style.id = 'fx-site-dark-css';
+    style.textContent = SITE_DARK_CSS;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function applyTheme(persist) {
+    const mode = resolveTheme();
+    ensureSiteStyle();
+    document.documentElement.classList.toggle('fx-site-dark', mode === 'dark');
+    if (ui.app) ui.app.dataset.theme = mode;
+    if (ui.themeSeg) {
+      ui.themeSeg.querySelectorAll('.fx-segbtn').forEach((b) => {
+        b.classList.toggle('is-active', b.dataset.value === state.theme);
+      });
+    }
+    if (ui.themeBtn) {
+      ui.themeBtn.textContent = mode === 'dark' ? '☀' : '☾';
+      ui.themeBtn.title = mode === 'dark' ? 'Zu Hell wechseln' : 'Zu Dunkel wechseln';
+    }
+    if (persist) store.set('fx_theme', state.theme);
+  }
+
+  function setTheme(value) {
+    state.theme = value;
+    applyTheme(true);
+  }
+
+  function toggleTheme() {
+    setTheme(resolveTheme() === 'dark' ? 'light' : 'dark');
+  }
+
   /* ---------- Update-Checker ---------- */
 
   function versionParts(v) {
@@ -1499,6 +1581,7 @@
       if (ui.availSection) ui.availSection.checkbox.checked = state.filters.onlyAvail;
       if (ui.favSection) ui.favSection.checkbox.checked = state.filters.onlyFavs;
       if (pending) Object.assign(state.filters, pending);
+      applyTheme(false);
       if (ui.geneticSeg) ui.geneticSeg.querySelectorAll('.fx-segbtn').forEach((b) => b.classList.toggle('is-active', b.dataset.value === state.filters.genetic));
       if (ui.irrSeg) ui.irrSeg.querySelectorAll('.fx-segbtn').forEach((b) => b.classList.toggle('is-active', b.dataset.value === state.filters.irr));
       ui.app.classList.add('is-open');
@@ -1608,6 +1691,17 @@
     if (params.get('cat')) state.category = params.get('cat');
 
     loadUserData();
+    store.get('fx_theme').then((t) => {
+      if (t === 'light' || t === 'dark' || t === 'auto') state.theme = t;
+      applyTheme(false);
+    });
+    applyTheme(false);
+    if (window.matchMedia) {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = () => { if (state.theme === 'auto') applyTheme(false); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
     loadCategory(state.category, false);
     setTimeout(() => checkUpdate(false), 4000);
     injectDetailBadge();
