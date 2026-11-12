@@ -41,6 +41,8 @@ auswählen. Läuft bis zum Neustart; dauerhaft erst nach Signatur (AMO unlisted)
 - **Apotheken-Preisvergleich** pro Produkt mit Preis, PLZ/Ort, Verfügbarkeit
 - **Favoriten** – Stern auf der Karte, Filter „Nur Favoriten“, lokal gespeichert
 - **CSV-Export** der aktuellen Auswahl
+- **Onboarding** beim ersten Öffnen (3 Schritte, überspringbar) und Tastaturkürzel
+- **Teilen-Link** kopiert die aktuelle Auswahl inklusive aller Filter
 - **Darkmode** – Auto/Hell/Dunkel, für das Overlay **und** die flowzz-Seite; Wahl wird gespeichert
 - **Vergleichsmodus** für 2–4 Produkte: Preise, THC/CBD, Herkunft, Bestrahlung, Bewertung,
   subjektive Wirkung und Terpene nebeneinander, beste Werte hervorgehoben

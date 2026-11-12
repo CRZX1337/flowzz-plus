@@ -254,8 +254,9 @@
       if (!state.items.length && ui.grid) {
         ui.grid.textContent = '';
         ui.empty.hidden = false;
-        ui.empty.querySelector('b').textContent = 'Daten konnten nicht geladen werden';
-        ui.empty.querySelector('span').textContent = 'Bitte die Seite neu laden. (' + errMsg(err) + ')';
+        ui.emptyTitle.textContent = 'Daten konnten nicht geladen werden';
+        ui.emptyText.textContent = 'Bitte die Seite neu laden. (' + errMsg(err) + ')';
+        ui.emptyReset.hidden = true;
       }
     } finally {
       if (state.category === catId) {
@@ -521,6 +522,12 @@
     const kbd = el('kbd', null, '/');
     searchWrap.append(input, kbd);
 
+    ui.helpBtn = el('button', 'fx-iconbtn fx-helpbtn', '?');
+    ui.helpBtn.type = 'button';
+    ui.helpBtn.title = 'Tastaturkürzel';
+    ui.helpBtn.setAttribute('aria-label', 'Tastaturkürzel anzeigen');
+    ui.helpBtn.addEventListener('click', openShortcuts);
+
     ui.themeBtn = el('button', 'fx-iconbtn fx-themebtn', '☾');
     ui.themeBtn.type = 'button';
     ui.themeBtn.title = 'Dunkelmodus';
@@ -531,7 +538,7 @@
     close.innerHTML = '<span>Schließen</span><kbd>Esc</kbd>';
     close.addEventListener('click', closeOverlay);
 
-    top.append(brand, searchWrap, ui.themeBtn, close);
+    top.append(brand, searchWrap, ui.helpBtn, ui.themeBtn, close);
 
     const tabs = el('nav', 'fx-tabs');
     ui.tabs = new Map();
@@ -608,6 +615,12 @@
     ui.sort = sort;
     sortWrap.append(sort);
 
+    const shareBtn = el('button', 'fx-iconbtn', '↗');
+    shareBtn.type = 'button';
+    shareBtn.title = 'Link zu dieser Auswahl kopieren';
+    shareBtn.setAttribute('aria-label', 'Link kopieren');
+    shareBtn.addEventListener('click', shareLink);
+
     const csvBtn = el('button', 'fx-iconbtn fx-csvbtn', 'CSV');
     csvBtn.type = 'button';
     csvBtn.title = 'Aktuelle Auswahl als CSV exportieren';
@@ -622,13 +635,18 @@
     mobileFilter.type = 'button';
     mobileFilter.addEventListener('click', () => side.classList.toggle('fx-side-open'));
 
-    tools.append(sortWrap, csvBtn, refresh, mobileFilter);
+    tools.append(sortWrap, shareBtn, csvBtn, refresh, mobileFilter);
     toolbar.append(ui.resultText, tools);
 
     ui.grid = el('div', 'fx-grid');
     ui.empty = el('div', 'fx-empty');
     ui.empty.hidden = true;
-    ui.empty.append(el('b', null, 'Nichts gefunden'), el('span', null, 'Filter lockern oder Suche zurücksetzen.'));
+    ui.emptyTitle = el('b', null, 'Nichts gefunden');
+    ui.emptyText = el('span', null, 'Filter lockern oder Suche zurücksetzen.');
+    ui.emptyReset = el('button', 'fx-btn fx-btn-primary', 'Alle Filter zurücksetzen');
+    ui.emptyReset.type = 'button';
+    ui.emptyReset.addEventListener('click', resetFilters);
+    ui.empty.append(ui.emptyTitle, ui.emptyText, ui.emptyReset);
     const moreWrap = el('div', 'fx-more');
     ui.moreBtn = el('button', 'fx-btn', 'Mehr laden');
     ui.moreBtn.type = 'button';
@@ -1192,7 +1210,24 @@
     const frag = document.createDocumentFragment();
     for (const p of slice) frag.append(card(p));
     grid.append(frag);
-    ui.empty.hidden = list.length > 0;
+    ui.empty.hidden = list.length > 0 || state.loading;
+    if (!list.length && !state.loading) {
+      const f = state.filters;
+      const active = f.q || f.origins.size || f.producers.size || f.genetic || f.thcMin != null ||
+        f.thcMax != null || f.priceMax != null || f.irr || f.onlyAvail || f.onlyFavs ||
+        Object.values(f.attrs).some((set) => set.size);
+      if (f.onlyFavs && !state.favorites.size) {
+        ui.emptyTitle.textContent = 'Noch keine Favoriten';
+        ui.emptyText.textContent = 'Markiere Produkte mit dem Stern, um sie hier zu sammeln.';
+      } else if (active) {
+        ui.emptyTitle.textContent = 'Keine Treffer für diese Kombination';
+        ui.emptyText.textContent = 'Ein Filter zu viel? Setz die Auswahl zurück und starte neu.';
+      } else {
+        ui.emptyTitle.textContent = 'Nichts gefunden';
+        ui.emptyText.textContent = 'Für diese Kategorie liegen gerade keine Produkte vor.';
+      }
+      ui.emptyReset.hidden = false;
+    }
     ui.moreBtn.parentElement.hidden = list.length <= slice.length;
     ui.grid.classList.toggle('fx-grid-empty', !list.length);
     updatePriceLabels();
@@ -1201,6 +1236,8 @@
   function renderLoading() {
     if (!ui.progress) return;
     ui.progress.hidden = !state.loading;
+    if (state.loading && !state.items.length) renderSkeletons();
+    if (!state.loading) clearSkeletons();
     if (state.loading) {
       const { n, total } = state.progress;
       const p = total ? Math.min(100, Math.round((n / total) * 100)) : 8;
@@ -1481,6 +1518,176 @@
     requestAnimationFrame(() => box.classList.add('is-visible'));
   }
 
+  /* ---------- Teilen ---------- */
+
+  function copyFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  function showLinkDialog(url) {
+    const head = el('div', 'fx-modal-head');
+    head.append(el('b', null, 'Link zur Auswahl'), el('span', null, 'Zum Kopieren markieren'));
+    const close = el('button', 'fx-modal-close', '✕');
+    close.type = 'button';
+    close.addEventListener('click', closeModal);
+    head.append(close);
+
+    const body = el('div', 'fx-modal-body');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.readOnly = true;
+    input.value = url;
+    input.className = 'fx-linkinput';
+    body.append(input, el('div', 'fx-modal-note', 'Der Link enthält alle aktiven Filter und lässt sich direkt teilen.'));
+
+    const wrap = el('div', 'fx-modal-inner');
+    wrap.append(head, body);
+    openModal(wrap);
+    setTimeout(() => { input.focus(); input.select(); }, 60);
+  }
+
+  async function shareLink() {
+    const url = location.href;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast('Link kopiert', 'good');
+        return;
+      }
+    } catch (e) { /* Fallback unten */ }
+
+    if (copyFallback(url)) {
+      toast('Link kopiert', 'good');
+    } else {
+      showLinkDialog(url);
+    }
+  }
+
+  /* ---------- Tastaturkürzel ---------- */
+
+  const SHORTCUTS = [
+    ['1 / 2 / 3', 'Blüten, Extrakte, Edibles'],
+    ['/', 'Suche fokussieren'],
+    ['f', 'Nur Favoriten ein/aus'],
+    ['d', 'Hell / Dunkel'],
+    ['s', 'Link zur Auswahl kopieren'],
+    ['c', 'Vergleich öffnen'],
+    ['?', 'Diese Übersicht'],
+    ['Esc', 'Schließen']
+  ];
+
+  function openShortcuts() {
+    const head = el('div', 'fx-modal-head');
+    head.append(el('b', null, 'Tastaturkürzel'), el('span', null, 'Schneller durch flowzz+'));
+    const close = el('button', 'fx-modal-close', '✕');
+    close.type = 'button';
+    close.addEventListener('click', closeModal);
+    head.append(close);
+
+    const body = el('div', 'fx-modal-body');
+    const list = el('div', 'fx-shortcuts');
+    for (const [key, label] of SHORTCUTS) {
+      const row = el('div', 'fx-shortcut');
+      row.append(el('kbd', null, key), el('span', null, label));
+      list.append(row);
+    }
+    body.append(list);
+
+    const wrap = el('div', 'fx-modal-inner');
+    wrap.append(head, body);
+    openModal(wrap);
+  }
+
+  /* ---------- Onboarding ---------- */
+
+  const ONBOARDING = [
+    {
+      title: 'Alles an einem Ort',
+      text: 'Blüten, Extrakte und Edibles mit Suche und Filtern nach Herkunft, Wirkung, Geschmack und Terpenen – auch Kombinationen, die flowzz selbst nicht anbietet.'
+    },
+    {
+      title: 'Preise wirklich vergleichen',
+      text: '„Preise vergleichen“ zeigt die günstigsten Apotheken. Mit ⇄ sammelst du bis zu vier Produkte und stellst sie nebeneinander.'
+    },
+    {
+      title: 'Deine Ansicht',
+      text: 'Darkmode über ☾, Favoriten über ★, Export als CSV und Teilen-Link. Mit ? siehst du alle Tastaturkürzel.'
+    }
+  ];
+
+  function openOnboarding(step = 0) {
+    const head = el('div', 'fx-modal-head');
+    head.append(el('b', null, 'Willkommen bei flowzz+'), el('span', null, (step + 1) + ' von ' + ONBOARDING.length));
+    const skip = el('button', 'fx-modal-close', '✕');
+    skip.type = 'button';
+    skip.title = 'Überspringen';
+    skip.addEventListener('click', async () => {
+      await store.set('fx_onboarded', 1);
+      closeModal();
+    });
+    head.append(skip);
+
+    const body = el('div', 'fx-modal-body');
+    const item = ONBOARDING[step];
+    body.append(el('div', 'fx-onb-title', item.title), el('p', 'fx-onb-text', item.text));
+
+    const dots = el('div', 'fx-onb-dots');
+    ONBOARDING.forEach((_, i) => dots.append(el('span', 'fx-onb-dot' + (i === step ? ' is-active' : ''))));
+    body.append(dots);
+
+    const actions = el('div', 'fx-modal-actions');
+    if (step > 0) {
+      const back = el('button', 'fx-btn', 'Zurück');
+      back.type = 'button';
+      back.addEventListener('click', () => openOnboarding(step - 1));
+      actions.append(back);
+    }
+    const next = el('button', 'fx-btn fx-btn-primary', step === ONBOARDING.length - 1 ? 'Los geht’s' : 'Weiter');
+    next.type = 'button';
+    next.addEventListener('click', async () => {
+      if (step === ONBOARDING.length - 1) {
+        await store.set('fx_onboarded', 1);
+        closeModal();
+        toast('Viel Spaß beim Filtern', 'good');
+      } else {
+        openOnboarding(step + 1);
+      }
+    });
+    actions.append(next);
+    body.append(actions);
+
+    const wrap = el('div', 'fx-modal-inner');
+    wrap.append(head, body);
+    openModal(wrap);
+  }
+
+  /* ---------- Skeletons ---------- */
+
+  function renderSkeletons() {
+    if (!ui.grid || ui.grid.querySelector('.fx-skeleton')) return;
+    ui.grid.textContent = '';
+    for (let i = 0; i < 8; i++) {
+      const card = el('div', 'fx-skeleton');
+      card.append(el('div', 'fx-skeleton-thumb'), el('div', 'fx-skeleton-line'), el('div', 'fx-skeleton-line short'));
+      ui.grid.append(card);
+    }
+  }
+
+  function clearSkeletons() {
+    if (!ui.grid) return;
+    ui.grid.querySelectorAll('.fx-skeleton').forEach((n) => n.remove());
+  }
+
   /* ---------- URL ---------- */
 
   const URL_KEYS = ['fx', 'cat', 'q', 'origin', 'producer', 'genetic', 'thc', 'price', 'irr', 'avail', 'fav', 'sort',
@@ -1588,12 +1795,18 @@
       document.documentElement.style.overflow = 'hidden';
       ui.host.classList.add('fx-visible');
       render();
+      syncURL();
       renderCompareTray();
+      store.get('fx_onboarded').then((done) => {
+        if (!done && !state.onboardedShown) {
+          state.onboardedShown = true;
+          setTimeout(() => openOnboarding(0), 700);
+        }
+      });
       loadUserData().then(() => {
         render();
         if (!state.items.length) loadCategory(state.category, false);
       });
-      setTimeout(() => ui.input && ui.input.focus(), 60);
     } else {
       ui.app.classList.add('is-open');
       document.documentElement.style.overflow = 'hidden';
@@ -1722,6 +1935,37 @@
       if (e.key === 'Escape') {
         if (ui.modal && !ui.modal.hidden) { closeModal(); return; }
         if (state.opened) { e.preventDefault(); closeOverlay(); }
+        return;
+      }
+
+      // Shortcuts nur im offenen Overlay und nicht in Eingabefeldern
+      if (state.opened && !(ui.modal && !ui.modal.hidden)) {
+        const t = e.target;
+        const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+        if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          if (e.key === '1' || e.key === '2' || e.key === '3') {
+            e.preventDefault();
+            switchCategory(CATEGORIES[Number(e.key) - 1].id);
+            return;
+          }
+          if (e.key === '?') { e.preventDefault(); openShortcuts(); return; }
+          if (e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); return; }
+          if (e.key.toLowerCase() === 's') { e.preventDefault(); shareLink(); return; }
+          if (e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            if (state.compare.size >= 2) openCompareDialog();
+            else toast('Erst zwei Produkte mit ⇄ auswählen');
+            return;
+          }
+          if (e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            state.filters.onlyFavs = !state.filters.onlyFavs;
+            if (ui.favSection) ui.favSection.checkbox.checked = state.filters.onlyFavs;
+            render();
+            syncURL();
+            return;
+          }
+        }
       }
       if (e.key === '/' && !state.opened) {
         const t = e.target;
