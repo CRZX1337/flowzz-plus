@@ -686,10 +686,14 @@
 
     ui.modal = el('div', 'fx-modal');
     ui.modal.hidden = true;
+    // Klicks dürfen nie durch das Modal auf die Seite darunter gehen – auch wenn
+    // ein Host-Stylesheet pointer-events anders erbt (Safari/iOS, ältere Builds).
+    ui.modal.style.pointerEvents = 'auto';
     ui.modalCard = el('div', 'fx-modal-card');
+    ui.modalCard.style.pointerEvents = 'auto';
     ui.modal.append(ui.modalCard);
     ui.modal.addEventListener('click', (e) => { if (e.target === ui.modal) closeModal(); });
-    shadow.appendChild(ui.modal);
+    ui.app.appendChild(ui.modal);
 
     input.addEventListener('input', debounce(() => {
       state.filters.q = input.value.trim();
@@ -1392,6 +1396,14 @@
 
   /* ---------- Theme ---------- */
 
+  const SITE_CSS = `
+    /* Cookiebot-Badge unten links ausblenden (Einstellungen bleiben im Footer erreichbar) */
+    #CookiebotWidget,
+    #CookiebotWidgetBody,
+    .CookiebotWidget,
+    .CookiebotWidget-logo { display: none !important; }
+  `;
+
   const SITE_DARK_CSS = `
     html.fx-site-dark { filter: invert(1) hue-rotate(180deg); background: #000; color-scheme: dark; }
     html.fx-site-dark img,
@@ -1413,11 +1425,14 @@
   }
 
   function ensureSiteStyle() {
-    if (document.getElementById('fx-site-dark-css')) return;
-    const style = document.createElement('style');
-    style.id = 'fx-site-dark-css';
-    style.textContent = SITE_DARK_CSS;
-    (document.head || document.documentElement).appendChild(style);
+    let style = document.getElementById('fx-site-css');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'fx-site-css';
+      (document.head || document.documentElement).appendChild(style);
+    }
+    const css = SITE_CSS + SITE_DARK_CSS;
+    if (style.textContent !== css) style.textContent = css;
   }
 
   function applyTheme(persist) {
@@ -1769,6 +1784,7 @@
 
   function openOverlay(pending) {
     ensureHost();
+    ensureSiteStyle();
     lowerCookieBanner();
     if (!ui.app) buildOverlay();
     if (!state.opened) {

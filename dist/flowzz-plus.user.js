@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         flowzz+ · Herkunft & Preise
 // @namespace    https://github.com/CRZX1337/flowzz-plus
-// @version      1.5.1
+// @version      1.5.2
 // @description  Herkunft, Apothekenpreise, Favoriten, Preisalarm und CSV-Export auf flowzz.com
 // @author       CRZX1337
 // @match        https://flowzz.com/*
@@ -377,7 +377,7 @@ if (typeof window !== 'undefined') {
   const CACHE_TTL = 6 * 60 * 60 * 1000;
   const VENDOR_TTL = 24 * 60 * 60 * 1000;
   const PAGE_STEP = 60;
-  const VERSION = '1.5.1';
+  const VERSION = '1.5.2';
 
   const UPDATE_JSON = 'https://raw.githubusercontent.com/CRZX1337/flowzz-plus/main/dist/version.json';
   const INSTALL_URL = 'https://github.com/CRZX1337/flowzz-plus/releases/latest/download/flowzz-plus.user.js';
@@ -1051,10 +1051,14 @@ if (typeof window !== 'undefined') {
 
     ui.modal = el('div', 'fx-modal');
     ui.modal.hidden = true;
+    // Klicks dürfen nie durch das Modal auf die Seite darunter gehen – auch wenn
+    // ein Host-Stylesheet pointer-events anders erbt (Safari/iOS, ältere Builds).
+    ui.modal.style.pointerEvents = 'auto';
     ui.modalCard = el('div', 'fx-modal-card');
+    ui.modalCard.style.pointerEvents = 'auto';
     ui.modal.append(ui.modalCard);
     ui.modal.addEventListener('click', (e) => { if (e.target === ui.modal) closeModal(); });
-    shadow.appendChild(ui.modal);
+    ui.app.appendChild(ui.modal);
 
     input.addEventListener('input', debounce(() => {
       state.filters.q = input.value.trim();
@@ -1757,6 +1761,14 @@ if (typeof window !== 'undefined') {
 
   /* ---------- Theme ---------- */
 
+  const SITE_CSS = `
+    /* Cookiebot-Badge unten links ausblenden (Einstellungen bleiben im Footer erreichbar) */
+    #CookiebotWidget,
+    #CookiebotWidgetBody,
+    .CookiebotWidget,
+    .CookiebotWidget-logo { display: none !important; }
+  `;
+
   const SITE_DARK_CSS = `
     html.fx-site-dark { filter: invert(1) hue-rotate(180deg); background: #000; color-scheme: dark; }
     html.fx-site-dark img,
@@ -1778,11 +1790,14 @@ if (typeof window !== 'undefined') {
   }
 
   function ensureSiteStyle() {
-    if (document.getElementById('fx-site-dark-css')) return;
-    const style = document.createElement('style');
-    style.id = 'fx-site-dark-css';
-    style.textContent = SITE_DARK_CSS;
-    (document.head || document.documentElement).appendChild(style);
+    let style = document.getElementById('fx-site-css');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'fx-site-css';
+      (document.head || document.documentElement).appendChild(style);
+    }
+    const css = SITE_CSS + SITE_DARK_CSS;
+    if (style.textContent !== css) style.textContent = css;
   }
 
   function applyTheme(persist) {
@@ -2134,6 +2149,7 @@ if (typeof window !== 'undefined') {
 
   function openOverlay(pending) {
     ensureHost();
+    ensureSiteStyle();
     lowerCookieBanner();
     if (!ui.app) buildOverlay();
     if (!state.opened) {
